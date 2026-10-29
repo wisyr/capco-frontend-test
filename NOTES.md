@@ -88,6 +88,15 @@ npm run test:e2e -w frontend     # Playwright against the real backend
   - Each ticket was planned before implementation. After each ticket the changes were reviewed for correctness, accessibility and fit with the existing architecture, and every finding was fixed in its own commit with a test.
   - Examples of what the reviews caught: an email check stricter than the API, a `returnTo` bypass using dot segments, and a failed background refetch wiping unsaved answers.
 
+## Security notes
+
+- **Registration reveals whether an email address is registered (account enumeration).**
+  - The API answers a duplicate email with `409 email-already-registered`, and TICKET-001 asks for "useful feedback for duplicate email". The form therefore says an account already exists and links to sign-in.
+  - Hiding this only in the UI would not protect anyone. The 409 is visible to anyone who calls the API directly or opens the browser's network tab, so the fix has to be on the server.
+  - Sign-in does not reveal it: wrong credentials share one `401` and one message, as TICKET-002 requires.
+  - Recommended backend change, out of scope here because the API contract is fixed: answer every registration the same way, for example "Check your email to continue". Then email the owner of an existing account instead of creating a second one. The API's rate limiting (`429`, which the form already explains) slows down automated guessing in the meantime.
+  - If the API changes, the frontend only needs to drop the `email-already-registered` branch in `frontend/src/routes/-create-account-form.tsx` and reword the success screen.
+
 ## Known limitations and out of scope
 
 - **Review and submit.** The review page is still the original prototype and submission is not implemented. Both are out of scope for TICKET-003.
