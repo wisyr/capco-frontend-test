@@ -1,29 +1,21 @@
-import {
-  Alert,
-  Button,
-  Card,
-  CardContent,
-  Link,
-  Stack,
-  TextField,
-  Typography,
-} from '@kyc/ui'
+import { Alert, Button, Link, Stack, TextField, Typography } from '@kyc/ui'
 import { useMutation } from '@tanstack/react-query'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
-import { flushSync } from 'react-dom'
 
 import { createApplicantAccount } from '../api/applicant-accounts'
 import { ApiError } from '../api/json-api-client'
 import { requestFailureMessage } from '../api/request-failure-message'
 
+import { AccountAccessCard } from './-account-access-card'
+import { credentialFieldErrors } from './-credential-field-errors'
 import {
   passwordPolicy,
   validateRegistration,
-  type RegistrationErrors,
   type RegistrationField,
   type RegistrationValues,
 } from './-registration-validation'
 import { accountAccessHref } from './-return-target'
+import { useFieldErrors } from './-use-field-errors'
 import styles from './account-access.module.css'
 
 export interface CreateAccountFormProps {
@@ -36,13 +28,7 @@ const emptyValues: RegistrationValues = {
   passwordConfirmation: '',
 }
 
-/** Order in which focus moves to the first invalid field. */
-const fieldOrder: readonly RegistrationField[] = [
-  'email',
-  'password',
-  'passwordConfirmation',
-]
-
+/** Input ids, in the order focus moves to the first invalid field. */
 const fieldIds: Record<RegistrationField, string> = {
   email: 'applicant-email',
   password: 'applicant-password',
@@ -52,26 +38,18 @@ const fieldIds: Record<RegistrationField, string> = {
 export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
   const signInHref = accountAccessHref('/sign-in', returnTo)
   const [values, setValues] = useState(emptyValues)
-  const [fieldErrors, setFieldErrors] = useState<RegistrationErrors>({})
+  const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
+    useFieldErrors(fieldIds)
   const registration = useMutation({
     mutationFn: createApplicantAccount,
     onSuccess: () => setValues(emptyValues),
     onError: (error) => {
-      const apiFieldErrors = registrationFieldErrors(error)
+      const apiFieldErrors = credentialFieldErrors(error)
       if (apiFieldErrors) {
         showFieldErrors(apiFieldErrors)
       }
     },
   })
-
-  /** Renders the errors before moving focus so the field announces them. */
-  function showFieldErrors(errors: RegistrationErrors) {
-    flushSync(() => setFieldErrors(errors))
-    const firstInvalid = fieldOrder.find((field) => errors[field])
-    if (firstInvalid) {
-      document.getElementById(fieldIds[firstInvalid])?.focus()
-    }
-  }
 
   function submit() {
     if (registration.isPending) {
@@ -82,7 +60,7 @@ export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
       showFieldErrors(result.errors)
       return
     }
-    setFieldErrors({})
+    clearFieldErrors()
     registration.mutate(result.credentials)
   }
 
@@ -95,7 +73,7 @@ export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
       onChange: (event: ChangeEvent<HTMLInputElement>) => {
         const { value } = event.target
         setValues((current) => ({ ...current, [field]: value }))
-        setFieldErrors((current) => ({ ...current, [field]: undefined }))
+        clearFieldError(field)
       },
       required: true,
       value: values[field],
@@ -189,27 +167,8 @@ export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
   )
 }
 
-function AccountAccessCard({ children }: { children: ReactNode }) {
-  return (
-    <main className={styles.page}>
-      <Card className={styles.card}>
-        <CardContent className={styles.cardContent}>{children}</CardContent>
-      </Card>
-    </main>
-  )
-}
-
 function focusOnMount(element: HTMLElement | null) {
   element?.focus()
-}
-
-/** Field errors from a 400 response, or undefined when none map to a field. */
-function registrationFieldErrors(error: Error): RegistrationErrors | undefined {
-  if (!(error instanceof ApiError) || error.status !== 400) {
-    return undefined
-  }
-  const { email, password } = error.attributeErrors()
-  return email || password ? { email, password } : undefined
 }
 
 /** Form-level feedback for failures that are not shown beside a field. */
@@ -217,7 +176,7 @@ function registrationFormError(
   error: Error,
   signInHref: string,
 ): ReactNode | undefined {
-  if (registrationFieldErrors(error)) {
+  if (credentialFieldErrors(error)) {
     return undefined
   }
   if (error instanceof ApiError && error.hasCode('email-already-registered')) {
