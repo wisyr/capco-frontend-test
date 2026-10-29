@@ -39,7 +39,7 @@ export default function App() {
   const navigate = useNavigate()
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Lets React Aria links and buttons with href use client-side routing. */}
+      {/* Lets React Aria components with an href, such as Link, use client-side routing. */}
       <RouterProvider
         navigate={(href) => {
           void navigate(href)
