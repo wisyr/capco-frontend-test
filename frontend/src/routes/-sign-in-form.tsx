@@ -1,16 +1,16 @@
-import {
-  Alert,
-  Button,
-  Card,
-  CardContent,
-  Link,
-  Stack,
-  TextField,
-  Typography,
-} from '@kyc/ui'
-import { useEffect, useRef, useState } from 'react'
+import { Alert, Button, Link, Stack, TextField, Typography } from '@kyc/ui'
+import { useMutation } from '@tanstack/react-query'
+import { useState, type ChangeEvent } from 'react'
 
+import { createApplicantSession } from '../api/applicant-sessions'
+import { ApiError, UnexpectedResponseError } from '../api/json-api-client'
+import { requestFailureMessage } from '../api/request-failure-message'
+
+import { AccountAccessCard } from './-account-access-card'
+import { credentialFieldErrors } from './-credential-field-errors'
+import { PendingStatus } from './-pending-status'
 import { accountAccessHref, isSafeJourneyPath } from './-return-target'
+import { useFieldErrors, type FieldErrors } from './-use-field-errors'
 import styles from './account-access.module.css'
 
 export interface SignInFormProps {
@@ -18,124 +18,164 @@ export interface SignInFormProps {
   onSuccess: (href: string) => void
 }
 
+type SignInField = 'email' | 'password'
+type SignInValues = Record<SignInField, string>
+
+/** Input ids, in the order focus moves to the first invalid field. */
+const fieldIds: Record<SignInField, string> = {
+  email: 'applicant-email',
+  password: 'applicant-password',
+}
+
 export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string>()
-  const [emailError, setEmailError] = useState<string>()
-  const [passwordError, setPasswordError] = useState<string>()
-  const emailInput = useRef<HTMLInputElement>(null)
-  const passwordInput = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (emailError) {
-      emailInput.current?.focus()
-    } else if (passwordError) {
-      passwordInput.current?.focus()
-    }
-  }, [emailError, passwordError])
-
-  async function submit(): Promise<void> {
-    setError(undefined)
-    setEmailError(undefined)
-    setPasswordError(undefined)
-
-    try {
-      const destination = returnTo ?? '/applications/current'
+  const [values, setValues] = useState<SignInValues>({
+    email: '',
+    password: '',
+  })
+  const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
+    useFieldErrors(fieldIds)
+  const signIn = useMutation({
+    // Drop the credentials from the mutation cache once the form unmounts.
+    gcTime: 0,
+    mutationFn: async (credentials: SignInValues) => {
+      const { journeyHref } = await createApplicantSession(credentials)
+      const destination = returnTo ?? journeyHref
+      // Never follow a journey URL that leaves the applicant journey.
       if (!isSafeJourneyPath(destination)) {
-        throw new Error('The destination is invalid.')
+        throw new UnexpectedResponseError(
+          `Refusing to navigate to ${destination}.`,
+        )
       }
-      onSuccess(destination)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : 'Account access could not be completed.',
-      )
+      return destination
+    },
+    onSuccess: (destination) => onSuccess(destination),
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        // Ask for the password again; the email address is kept.
+        setValues((current) => ({ ...current, password: '' }))
+      }
+      const apiFieldErrors = credentialFieldErrors(error)
+      if (apiFieldErrors) {
+        showFieldErrors(apiFieldErrors)
+      }
+    },
+  })
+
+  function submit() {
+    if (signIn.isPending) {
+      return
+    }
+    const credentials = {
+      email: values.email.trim(),
+      password: values.password,
+    }
+    const errors = requiredFieldErrors(credentials)
+    if (errors) {
+      showFieldErrors(errors)
+      return
+    }
+    clearFieldErrors()
+    signIn.mutate(credentials)
+  }
+
+  function fieldProps(field: SignInField) {
+    return {
+      error: Boolean(fieldErrors[field]),
+      fullWidth: true,
+      helperText: fieldErrors[field],
+      id: fieldIds[field],
+      name: field,
+      onChange: (event: ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target
+        setValues((current) => ({ ...current, [field]: value }))
+        clearFieldError(field)
+      },
+      required: true,
+      value: values[field],
     }
   }
 
+  const formError = signIn.isError ? signInFormError(signIn.error) : undefined
+
   return (
-    <main className={styles.page}>
-      <Card className={styles.card}>
-        <CardContent className={styles.cardContent}>
-          <Stack
-            component="form"
-            className={styles.form}
-            onSubmit={(event) => {
-              event.preventDefault()
-              void submit()
-            }}
-            spacing={3}
-          >
-            <Stack spacing={1}>
-              <Typography component="h1" variant="heading">
-                Welcome back
-              </Typography>
-              <Typography tone="muted">
-                Sign in to continue your KYC application.
-              </Typography>
-            </Stack>
-            {(error ?? emailError ?? passwordError) ? (
-              <Alert aria-live="assertive" role="alert" severity="error">
-                {error ?? emailError ?? passwordError}
-              </Alert>
-            ) : null}
-            <TextField
-              autoComplete="email"
-              error={Boolean(emailError)}
-              fullWidth
-              helperText={emailError}
-              id="applicant-email"
-              inputRef={emailInput}
-              label="Email address"
-              name="email"
-              onChange={(event) => {
-                setEmail(event.target.value)
-                setEmailError(undefined)
-              }}
-              required
-              type="email"
-              value={email}
-            />
-            <TextField
-              autoComplete="current-password"
-              error={Boolean(passwordError)}
-              fullWidth
-              helperText={passwordError}
-              id="applicant-password"
-              inputRef={passwordInput}
-              label="Password"
-              name="password"
-              onChange={(event) => {
-                setPassword(event.target.value)
-                setPasswordError(undefined)
-              }}
-              required
-              type="password"
-              value={password}
-            />
-            <Button
-              className={styles.submit}
-              fullWidth
-              size="large"
-              type="submit"
-            >
-              Sign in
-            </Button>
-            <Typography
-              className={styles.footer}
-              align="center"
-              variant="caption"
-            >
-              <span>New to KYC? </span>
-              <Link href={accountAccessHref('/create-account', returnTo)}>
-                Create account
-              </Link>
-            </Typography>
-          </Stack>
-        </CardContent>
-      </Card>
-    </main>
+    <AccountAccessCard>
+      <title>Sign in | KYC</title>
+      <Stack
+        component="form"
+        className={styles.form}
+        onSubmit={(event) => {
+          event.preventDefault()
+          submit()
+        }}
+        spacing={3}
+      >
+        <Stack spacing={1}>
+          <Typography component="h1" variant="heading">
+            Welcome back
+          </Typography>
+          <Typography tone="muted">
+            Sign in to continue your KYC application.
+          </Typography>
+        </Stack>
+        {formError ? <Alert severity="error">{formError}</Alert> : null}
+        <TextField
+          {...fieldProps('email')}
+          autoComplete="email"
+          label="Email address"
+          spellCheck={false}
+          type="email"
+        />
+        <TextField
+          {...fieldProps('password')}
+          autoComplete="current-password"
+          label="Password"
+          type="password"
+        />
+        <Button
+          className={styles.submit}
+          fullWidth
+          isPending={signIn.isPending}
+          size="large"
+          type="submit"
+        >
+          {signIn.isPending ? 'Signing in…' : 'Sign in'}
+        </Button>
+        <PendingStatus message={signIn.isPending ? 'Signing in…' : undefined} />
+        <Typography className={styles.footer} align="center" variant="caption">
+          <span>New to KYC? </span>
+          <Link href={accountAccessHref('/create-account', returnTo)}>
+            Create account
+          </Link>
+        </Typography>
+      </Stack>
+    </AccountAccessCard>
   )
+}
+
+function requiredFieldErrors({
+  email,
+  password,
+}: SignInValues): FieldErrors<SignInField> | undefined {
+  if (email && password) {
+    return undefined
+  }
+  return {
+    email: email ? undefined : 'Enter your email address.',
+    password: password ? undefined : 'Enter your password.',
+  }
+}
+
+/** Form-level feedback for failures that are not shown beside a field. */
+function signInFormError(error: Error): string | undefined {
+  if (credentialFieldErrors(error)) {
+    return undefined
+  }
+  if (error instanceof ApiError && error.status === 401) {
+    // The API answers unknown emails and wrong passwords identically.
+    return 'The email address or password is incorrect.'
+  }
+  if (error instanceof ApiError && error.status === 400) {
+    return 'We could not process your details. Check them and try again.'
+  }
+  return requestFailureMessage(error)
 }
