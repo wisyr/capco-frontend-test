@@ -27,3 +27,12 @@ export async function createApplicantSession(
   })
   return { journeyHref: session.data.attributes.href }
 }
+
+/** Ends the Applicant's session; the API clears the session cookie. */
+export async function deleteApplicantSession(): Promise<void> {
+  await jsonApiRequest('/applicant-sessions/current', {
+    method: 'DELETE',
+    // A 204 response has no body.
+    schema: z.unknown(),
+  })
+}

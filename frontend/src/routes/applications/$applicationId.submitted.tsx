@@ -10,11 +10,6 @@ export default function SubmissionReceiptPage() {
 
   return (
     <div className="submission-receipt">
-      <header className="submission-receipt__header">
-        <Typography component="span" variant="subheading">
-          KYC Application
-        </Typography>
-      </header>
       <main className="submission-receipt__main">
         <Typography component="p" variant="eyebrow" tone="accent">
           APPLICATION RECEIVED

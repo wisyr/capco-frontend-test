@@ -23,15 +23,6 @@ body {
   background: #f5f7fa;
 }
 
-.submission-receipt__header {
-  align-items: center;
-  background: #1976d2;
-  color: #fff;
-  display: flex;
-  height: 64px;
-  padding: 0 32px;
-}
-
 .submission-receipt__main {
   box-sizing: border-box;
   display: flex;
@@ -47,10 +38,6 @@ body {
 }
 
 @media (max-width: 600px) {
-  .submission-receipt__header {
-    padding: 0 24px;
-  }
-
   .submission-receipt__main {
     padding: 40px 20px 24px;
   }

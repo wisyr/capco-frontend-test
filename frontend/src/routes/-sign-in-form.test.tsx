@@ -13,7 +13,7 @@ expect.extend(toHaveNoViolations)
 
 const SESSIONS_URL = '/api/v1/applicant-sessions'
 
-function renderForm(returnTo?: string) {
+function renderForm(returnTo?: string, notice?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   })
@@ -21,7 +21,7 @@ function renderForm(returnTo?: string) {
   const user = userEvent.setup()
   const view = render(
     <QueryClientProvider client={queryClient}>
-      <SignInForm onSuccess={onSuccess} returnTo={returnTo} />
+      <SignInForm notice={notice} onSuccess={onSuccess} returnTo={returnTo} />
     </QueryClientProvider>,
   )
   return { onSuccess, queryClient, user, ...view }
@@ -88,6 +88,17 @@ describe('SignInForm', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
+  it('explains why the applicant was sent to sign in', () => {
+    renderForm(
+      '/applications/current',
+      'Your session has ended. Sign in again to continue.',
+    )
+
+    expect(
+      screen.getByText('Your session has ended. Sign in again to continue.'),
+    ).toHaveAttribute('role', 'status')
+  })
+
   it('requires both fields before contacting the API', async () => {
     let requests = 0
     server.use(
@@ -136,6 +147,22 @@ describe('SignInForm', () => {
         attributes: { email: 'ada@example.com', password: 'Secret!' },
       },
     })
+  })
+
+  it('forgets data cached for a previous applicant', async () => {
+    server.use(http.post(SESSIONS_URL, () => sessionCreated()))
+    const { user, onSuccess, queryClient } = renderForm()
+    queryClient.setQueryData(['applicant-applications', 'current'], {
+      id: 'previous-applicant',
+    })
+
+    await fillForm(user)
+    await user.click(submitButton())
+
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(
+      queryClient.getQueryData(['applicant-applications', 'current']),
+    ).toBeUndefined()
   })
 
   it('returns to the page that sent the applicant to sign in', async () => {

@@ -1,5 +1,5 @@
 import { Alert, Button, Link, Stack, TextField, Typography } from '@kyc/ui'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
 
 import { createApplicantSession } from '../api/applicant-sessions'
@@ -15,6 +15,8 @@ import styles from './account-access.module.css'
 
 export interface SignInFormProps {
   returnTo?: string
+  /** Explains why the applicant was sent to sign in, if they were. */
+  notice?: string
   onSuccess: (href: string) => void
 }
 
@@ -27,13 +29,14 @@ const fieldIds: Record<SignInField, string> = {
   password: 'applicant-password',
 }
 
-export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
+export function SignInForm({ returnTo, notice, onSuccess }: SignInFormProps) {
   const [values, setValues] = useState<SignInValues>({
     email: '',
     password: '',
   })
   const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
     useFieldErrors(fieldIds)
+  const queryClient = useQueryClient()
   const signIn = useMutation({
     // Drop the credentials from the mutation cache once the form unmounts.
     gcTime: 0,
@@ -48,7 +51,11 @@ export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
       }
       return destination
     },
-    onSuccess: (destination) => onSuccess(destination),
+    onSuccess: (destination) => {
+      // Never show data cached for a previous applicant in this browser.
+      queryClient.removeQueries()
+      onSuccess(destination)
+    },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 401) {
         // Ask for the password again; the email address is kept.
@@ -117,6 +124,7 @@ export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
             Sign in to continue your KYC application.
           </Typography>
         </Stack>
+        {notice ? <Alert severity="info">{notice}</Alert> : null}
         {formError ? <Alert severity="error">{formError}</Alert> : null}
         <TextField
           {...fieldProps('email')}

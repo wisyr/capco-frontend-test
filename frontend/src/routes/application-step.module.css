@@ -32,3 +32,17 @@
     padding: 48px;
   }
 }
+
+.alertAction {
+  display: block;
+  margin-top: 12px;
+}
+
+.documentField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fieldError.fieldError {
+  color: #b3261e;
+}

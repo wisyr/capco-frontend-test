@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest'
 
 import { server } from '../test/server'
 
-import { createApplicantSession } from './applicant-sessions'
+import {
+  createApplicantSession,
+  deleteApplicantSession,
+} from './applicant-sessions'
 import { UnexpectedResponseError } from './json-api-client'
 
 const SESSIONS_URL = '/api/v1/applicant-sessions'
@@ -51,5 +54,22 @@ describe('createApplicantSession', () => {
     await expect(
       createApplicantSession({ email: 'ada@example.com', password: 'Secret!' }),
     ).rejects.toBeInstanceOf(UnexpectedResponseError)
+  })
+})
+
+describe('deleteApplicantSession', () => {
+  it('signs out with the CSRF token', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-3'
+    let csrfToken: string | null = null
+    server.use(
+      http.delete(`${SESSIONS_URL}/current`, ({ request }) => {
+        csrfToken = request.headers.get('X-XSRF-TOKEN')
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await expect(deleteApplicantSession()).resolves.toBeUndefined()
+    expect(csrfToken).toBe('csrf-3')
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
   })
 })

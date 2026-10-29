@@ -64,6 +64,32 @@ describe('jsonApiRequest', () => {
     expect(contentType).toBeNull()
   })
 
+  it('sends FormData as a multipart upload', async () => {
+    let request: Request | undefined
+    server.use(
+      http.post('/api/v1/uploads', ({ request: received }) => {
+        request = received.clone()
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    const body = new FormData()
+    body.append('file', new File(['image'], 'id.png', { type: 'image/png' }))
+
+    await jsonApiRequest('/uploads', {
+      method: 'POST',
+      body,
+      schema: z.unknown(),
+    })
+
+    expect(request?.headers.get('Accept')).toBe(JSON_API)
+    expect(request?.headers.get('Content-Type')).toMatch(
+      /^multipart\/form-data; boundary=/,
+    )
+    const file = (await request?.formData())?.get('file')
+    expect(file).toBeInstanceOf(File)
+    expect((file as File).name).toBe('id.png')
+  })
+
   it('sends the CSRF cookie value on state-changing requests only', async () => {
     setCookie('XSRF-TOKEN=token%2F1')
     const tokens: Record<string, string | null> = {}

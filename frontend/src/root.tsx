@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { RouterProvider } from 'react-aria-components'
 import {
@@ -12,6 +12,8 @@ import {
   useNavigate,
   useRouteError,
 } from 'react-router'
+
+import { createQueryClient } from './api/query-client'
 import './styles.css'
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -33,9 +35,7 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { mutations: { retry: false } } }),
-  )
+  const [queryClient] = useState(createQueryClient)
   const navigate = useNavigate()
   return (
     <QueryClientProvider client={queryClient}>

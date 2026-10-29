@@ -70,7 +70,7 @@ export class UnexpectedResponseError extends Error {
 
 interface RequestOptions<T> {
   method?: HttpMethod
-  /** JSON:API document to send as the request body. */
+  /** JSON:API document to send, or FormData for a multipart upload. */
   body?: unknown
   /** Validates the response document; use `z.unknown()` to ignore it. */
   schema: z.ZodType<T>
@@ -88,7 +88,9 @@ export async function jsonApiRequest<T>(
   { method = 'GET', body, schema, signal }: RequestOptions<T>,
 ): Promise<T> {
   const headers = new Headers({ Accept: JSON_API_MEDIA_TYPE })
-  if (body !== undefined) {
+  const isMultipart = body instanceof FormData
+  // The browser sets the multipart Content-Type, including its boundary.
+  if (body !== undefined && !isMultipart) {
     headers.set('Content-Type', JSON_API_MEDIA_TYPE)
   }
   const csrfToken = method === 'GET' ? undefined : readCookie(CSRF_COOKIE_NAME)
@@ -101,7 +103,7 @@ export async function jsonApiRequest<T>(
     response = await fetch(`${API_BASE_PATH}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: isMultipart || body === undefined ? body : JSON.stringify(body),
       credentials: 'same-origin',
       signal,
     })
