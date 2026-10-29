@@ -1,33 +1,11 @@
-import {
-  expect,
-  test,
-  type APIRequestContext,
-  type Page,
-} from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-const password = 'Kyc-e2e-1'
-
-async function registerApplicant(request: APIRequestContext, email: string) {
-  const response = await request.post('/api/v1/applicant-accounts', {
-    headers: { 'Content-Type': 'application/vnd.api+json' },
-    data: {
-      data: { type: 'applicant-accounts', attributes: { email, password } },
-    },
-  })
-  expect(response.status()).toBe(201)
-}
-
-async function signIn(page: Page, email: string, withPassword: string) {
-  await page.goto('/sign-in')
-  await page.getByLabel('Email address').fill(email)
-  await page.getByLabel('Password').fill(withPassword)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-}
+import { password, registerApplicant, signIn, uniqueEmail } from './support'
 
 test('an applicant signs in and reaches the journey URL from the API', async ({
   page,
 }) => {
-  const email = `login-${Date.now()}@example.test`
+  const email = uniqueEmail('login')
   await registerApplicant(page.request, email)
 
   await signIn(page, email, password)
@@ -44,7 +22,7 @@ test('an applicant signs in and reaches the journey URL from the API', async ({
 test('wrong credentials show a generic error and keep the email', async ({
   page,
 }) => {
-  const email = `login-wrong-${Date.now()}@example.test`
+  const email = uniqueEmail('login-wrong')
   await registerApplicant(page.request, email)
 
   await signIn(page, email, 'Wrong-password-1')

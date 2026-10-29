@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { startNewApplication } from './support'
+
 test('application form lays out actions without forwarding style props to the DOM', async ({
   page,
 }) => {
@@ -13,11 +15,9 @@ test('application form lays out actions without forwarding style props to the DO
     }
   })
 
-  await page.goto('/applications/prototype/personal-details')
+  await startNewApplication(page)
 
-  const actions = page
-    .getByRole('button', { name: 'Continue' })
-    .locator('xpath=..')
+  const actions = page.getByRole('button', { name: 'Back' }).locator('xpath=..')
   await expect(actions).toHaveCSS('justify-content', 'space-between')
   expect(reactWarnings).toEqual([])
 })
