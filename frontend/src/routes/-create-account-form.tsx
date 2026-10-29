@@ -192,6 +192,9 @@ function registrationFormError(
   if (credentialFieldErrors(error)) {
     return undefined
   }
+  // This tells the visitor the email is registered (account enumeration). The
+  // ticket asks for it, and the API's 409 reveals it anyway, so only a
+  // backend change can close it. See "Security notes" in NOTES.md.
   if (error instanceof ApiError && error.hasCode('email-already-registered')) {
     return (
       <>
