@@ -35,6 +35,8 @@ export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
   const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
     useFieldErrors(fieldIds)
   const signIn = useMutation({
+    // Drop the credentials from the mutation cache once the form unmounts.
+    gcTime: 0,
     mutationFn: async (credentials: SignInValues) => {
       const { journeyHref } = await createApplicantSession(credentials)
       const destination = returnTo ?? journeyHref

@@ -24,7 +24,7 @@ function renderForm(returnTo?: string) {
       <SignInForm onSuccess={onSuccess} returnTo={returnTo} />
     </QueryClientProvider>,
   )
-  return { onSuccess, user, ...view }
+  return { onSuccess, queryClient, user, ...view }
 }
 
 const emailInput = () => screen.getByLabelText('Email address')
@@ -206,6 +206,26 @@ describe('SignInForm', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Signing in…')
     await vi.waitFor(() => expect(onSuccess).toHaveBeenCalled())
     expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  it('forgets the submitted password once the form unmounts', async () => {
+    respondWith(401, {
+      errors: [
+        apiError(401, 'invalid-credentials', 'Invalid email or password'),
+      ],
+    })
+    const { user, queryClient, unmount } = renderForm()
+
+    await fillForm(user)
+    await user.click(submitButton())
+    await screen.findByRole('alert')
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(1)
+
+    unmount()
+
+    await vi.waitFor(() =>
+      expect(queryClient.getMutationCache().getAll()).toHaveLength(0),
+    )
   })
 
   it('rejects invalid credentials without revealing which one was wrong', async () => {

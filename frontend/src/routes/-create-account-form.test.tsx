@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { delay, http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { server } from '../test/server'
 
@@ -23,7 +23,7 @@ function renderForm(returnTo?: string) {
       <CreateAccountForm returnTo={returnTo} />
     </QueryClientProvider>,
   )
-  return { user, ...view }
+  return { queryClient, user, ...view }
 }
 
 const emailInput = () => screen.getByLabelText('Email address')
@@ -157,6 +157,22 @@ describe('CreateAccountForm', () => {
       },
     })
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('forgets the submitted password once the confirmation unmounts', async () => {
+    respondWith(201)
+    const { user, queryClient, unmount } = renderForm()
+
+    await fillValidForm(user)
+    await user.click(submitButton())
+    await screen.findByRole('heading', { name: 'Account created' })
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(1)
+
+    unmount()
+
+    await vi.waitFor(() =>
+      expect(queryClient.getMutationCache().getAll()).toHaveLength(0),
+    )
   })
 
   it('shows the pending state and ignores repeated submissions', async () => {

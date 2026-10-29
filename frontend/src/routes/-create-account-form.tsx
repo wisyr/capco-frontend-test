@@ -42,6 +42,8 @@ export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
   const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
     useFieldErrors(fieldIds)
   const registration = useMutation({
+    // Drop the credentials from the mutation cache once the form unmounts.
+    gcTime: 0,
     mutationFn: createApplicantAccount,
     onSuccess: () => setValues(emptyValues),
     onError: (error) => {
