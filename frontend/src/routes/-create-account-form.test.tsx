@@ -104,8 +104,59 @@ describe('CreateAccountForm', () => {
     expect(requests).toBe(0)
     expect(await axe(container)).toHaveNoViolations()
 
-    await user.type(emailInput(), 'a')
+    await user.type(emailInput(), 'ada@example.com')
     expect(emailInput()).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('keeps an error up to date while the field is corrected', async () => {
+    const { user } = renderForm()
+
+    await user.type(passwordInput(), 'abc')
+    await user.click(submitButton())
+    expect(passwordInput()).toHaveAccessibleDescription(
+      'Password must be at least 6 characters.',
+    )
+
+    await user.type(passwordInput(), 'def')
+    expect(passwordInput()).toHaveAccessibleDescription(
+      'Password must include an uppercase letter.',
+    )
+    expect(passwordInput()).toBeInvalid()
+
+    await user.type(passwordInput(), 'G!')
+    expect(passwordInput()).not.toHaveAttribute('aria-invalid')
+    expect(passwordInput()).toHaveAccessibleDescription(
+      /^Use at least 6 characters/,
+    )
+  })
+
+  it('clears the mismatch once the password is edited to match', async () => {
+    const { user } = renderForm()
+
+    await user.type(emailInput(), 'ada@example.com')
+    await user.type(passwordInput(), 'Secret!1')
+    await user.type(confirmationInput(), 'Secret!')
+    await user.click(submitButton())
+    expect(confirmationInput()).toHaveAccessibleDescription(
+      'Passwords do not match.',
+    )
+
+    await user.type(passwordInput(), '{Backspace}')
+
+    expect(confirmationInput()).not.toHaveAttribute('aria-invalid')
+    expect(confirmationInput()).not.toHaveAccessibleDescription(
+      'Passwords do not match.',
+    )
+  })
+
+  it('does not show errors while typing before the first submit', async () => {
+    const { user } = renderForm()
+
+    await user.type(passwordInput(), 'a')
+    await user.type(confirmationInput(), 'b')
+
+    expect(passwordInput()).not.toHaveAttribute('aria-invalid')
+    expect(confirmationInput()).not.toHaveAttribute('aria-invalid')
   })
 
   it('reports mismatched passwords on the confirmation field', async () => {

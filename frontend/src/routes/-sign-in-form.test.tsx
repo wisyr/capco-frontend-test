@@ -122,6 +122,25 @@ describe('SignInForm', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
+  it('clears a required-field error once the field is filled, and checks again on submit', async () => {
+    const { user } = renderForm()
+
+    await user.click(submitButton())
+    await user.type(emailInput(), 'ada@example.com')
+
+    expect(emailInput()).not.toHaveAttribute('aria-invalid')
+    expect(passwordInput()).toHaveAccessibleDescription('Enter your password.')
+
+    // A fixed field stays quiet while it is edited, until the next submit.
+    await user.clear(emailInput())
+    expect(emailInput()).not.toHaveAttribute('aria-invalid')
+
+    await user.click(submitButton())
+    expect(emailInput()).toHaveAccessibleDescription(
+      'Enter your email address.',
+    )
+  })
+
   it('signs in with a JSON:API document and follows the journey URL', async () => {
     let request: Request | undefined
     server.use(
