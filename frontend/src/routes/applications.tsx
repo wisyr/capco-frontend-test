@@ -1,5 +1,6 @@
 import { Alert, Button, Typography } from '@kyc/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { Outlet, useNavigate } from 'react-router'
 
 import { deleteApplicantSession } from '../api/applicant-sessions'
@@ -11,12 +12,26 @@ import { isSessionExpired } from './applications/-session'
 export default function ApplicationsLayout() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const signedOut = useRef(false)
+
+  // Forget cached applicant data only once the journey has unmounted.
+  // Removing queries a page still observes makes it refetch them straight
+  // away, without a session.
+  useEffect(
+    () => () => {
+      if (signedOut.current) {
+        queryClient.removeQueries()
+      }
+    },
+    [queryClient],
+  )
+
   const signOut = useMutation({
     mutationFn: deleteApplicantSession,
     onSettled: (_, error) => {
       // A 401 means the session had already ended, which is still signed out.
       if (!error || isSessionExpired(error)) {
-        queryClient.removeQueries()
+        signedOut.current = true
         void navigate('/sign-in', { replace: true })
       }
     },
