@@ -149,6 +149,22 @@ describe('SignInForm', () => {
     })
   })
 
+  it('forgets data cached for a previous applicant', async () => {
+    server.use(http.post(SESSIONS_URL, () => sessionCreated()))
+    const { user, onSuccess, queryClient } = renderForm()
+    queryClient.setQueryData(['applicant-applications', 'current'], {
+      id: 'previous-applicant',
+    })
+
+    await fillForm(user)
+    await user.click(submitButton())
+
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(
+      queryClient.getQueryData(['applicant-applications', 'current']),
+    ).toBeUndefined()
+  })
+
   it('returns to the page that sent the applicant to sign in', async () => {
     server.use(http.post(SESSIONS_URL, () => sessionCreated()))
     const { user, onSuccess } = renderForm('/applications/42/personal-details')

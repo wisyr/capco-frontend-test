@@ -1,5 +1,5 @@
 import { Alert, Button, Link, Stack, TextField, Typography } from '@kyc/ui'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
 
 import { createApplicantSession } from '../api/applicant-sessions'
@@ -36,6 +36,7 @@ export function SignInForm({ returnTo, notice, onSuccess }: SignInFormProps) {
   })
   const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
     useFieldErrors(fieldIds)
+  const queryClient = useQueryClient()
   const signIn = useMutation({
     // Drop the credentials from the mutation cache once the form unmounts.
     gcTime: 0,
@@ -50,7 +51,11 @@ export function SignInForm({ returnTo, notice, onSuccess }: SignInFormProps) {
       }
       return destination
     },
-    onSuccess: (destination) => onSuccess(destination),
+    onSuccess: (destination) => {
+      // Never show data cached for a previous applicant in this browser.
+      queryClient.removeQueries()
+      onSuccess(destination)
+    },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 401) {
         // Ask for the password again; the email address is kept.
