@@ -8,6 +8,7 @@ import {
   getCurrentApplication,
   saveApplicationForm,
   startApplication,
+  uploadDocumentEvidence,
 } from './applicant-applications'
 import { ApiError } from './json-api-client'
 
@@ -199,5 +200,39 @@ describe('saveApplicationForm', () => {
 
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).hasCode('form-version-conflict')).toBe(true)
+  })
+})
+
+describe('uploadDocumentEvidence', () => {
+  it('uploads the image as the multipart file part with the CSRF token', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-4'
+    let request: Request | undefined
+    server.use(
+      http.post(
+        `/api/v1/applicant-applications/${APPLICATION_ID}/document-evidence`,
+        ({ request: received }) => {
+          request = received.clone()
+          return HttpResponse.json(
+            {
+              data: {
+                type: 'applicant-application-document-evidence',
+                id: APPLICATION_ID,
+                attributes: { present: true },
+              },
+            },
+            { status: 201 },
+          )
+        },
+      ),
+    )
+    const image = new File(['png'], 'passport.png', { type: 'image/png' })
+
+    await expect(
+      uploadDocumentEvidence(APPLICATION_ID, image),
+    ).resolves.toEqual({ present: true })
+    expect(request?.headers.get('X-XSRF-TOKEN')).toBe('csrf-4')
+    const file = (await request?.formData())?.get('file') as File
+    expect(file.name).toBe('passport.png')
+    expect(file.type).toBe('image/png')
   })
 })

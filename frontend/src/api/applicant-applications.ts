@@ -144,6 +144,28 @@ export async function saveApplicationForm(
   )
 }
 
+const documentEvidenceDocumentSchema = z.object({
+  data: z.object({
+    type: z.literal('applicant-application-document-evidence'),
+    id: z.string(),
+    attributes: z.object({ present: z.boolean() }),
+  }),
+})
+
+/** Stores a JPG or PNG identity document image for the draft. */
+export async function uploadDocumentEvidence(
+  applicationId: string,
+  file: File,
+): Promise<{ present: boolean }> {
+  const body = new FormData()
+  body.append('file', file)
+  const document = await jsonApiRequest(
+    `/applicant-applications/${encodeURIComponent(applicationId)}/document-evidence`,
+    { method: 'POST', body, schema: documentEvidenceDocumentSchema },
+  )
+  return document.data.attributes
+}
+
 export const currentApplicationQuery = queryOptions({
   queryKey: ['applicant-applications', 'current'],
   queryFn: getCurrentApplication,

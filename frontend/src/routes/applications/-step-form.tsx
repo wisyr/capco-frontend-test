@@ -5,11 +5,13 @@ import { useLocation, useNavigate } from 'react-router'
 
 import { PendingStatus } from '../-pending-status'
 import { accountAccessHref } from '../-return-target'
+import { useFieldErrors } from '../-use-field-errors'
 import {
   applicationFormQuery,
   applicationSteps,
   currentApplicationQuery,
   saveApplicationForm,
+  uploadDocumentEvidence,
   type ApplicationForm,
   type ApplicationStep,
   type SaveFormRequest,
@@ -25,6 +27,11 @@ import {
   valuesFromAnswers,
   type TextAnswerField,
 } from './-application-steps'
+import {
+  acceptedDocumentTypes,
+  documentFileError,
+  DocumentUploadError,
+} from './-document-evidence'
 import { isSessionExpired } from './-session'
 
 export interface StepFormProps {
@@ -37,6 +44,8 @@ export interface StepFormProps {
 /** Save keeps the applicant on the step; continue moves on after saving. */
 type SaveIntent = 'save' | 'continue'
 
+const documentInputId = 'document-evidence'
+
 export function StepForm({ applicationId, step, form }: StepFormProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -47,6 +56,15 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
   // advance it, or a save could overwrite changes made somewhere else.
   const [version, setVersion] = useState(form.version)
   const [notice, setNotice] = useState<string>()
+  const [documentPresent, setDocumentPresent] = useState(
+    form.documentEvidencePresent,
+  )
+  const [documentFile, setDocumentFile] = useState<File | null>(null)
+  // Remounts the file input to clear it once its file is uploaded.
+  const [documentInputKey, setDocumentInputKey] = useState(0)
+  const { fieldErrors, showFieldErrors, clearFieldError } = useFieldErrors({
+    document: documentInputId,
+  })
 
   const stepNumber = applicationSteps.indexOf(step) + 1
   const title = stepTitles[step]
@@ -58,19 +76,51 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
     ? `/applications/${applicationId}/identity-and-address`
     : `/applications/${applicationId}/review`
 
+  /** Records what the API persisted so later saves and steps build on it. */
+  function keepSaved(saved: ApplicationForm) {
+    queryClient.setQueryData(formQuery.queryKey, saved)
+    void queryClient.invalidateQueries({
+      queryKey: currentApplicationQuery.queryKey,
+    })
+    setVersion(saved.version)
+    setDocumentPresent(saved.documentEvidencePresent)
+  }
+
   const save = useMutation({
-    mutationFn: (request: SaveFormRequest & { intent: SaveIntent }) =>
-      saveApplicationForm(applicationId, request),
-    onSuccess: (saved, { intent }) => {
-      queryClient.setQueryData(formQuery.queryKey, saved)
-      void queryClient.invalidateQueries({
-        queryKey: currentApplicationQuery.queryKey,
-      })
-      setVersion(saved.version)
+    mutationFn: async ({
+      file,
+      ...request
+    }: SaveFormRequest & { intent: SaveIntent; file: File | null }) => {
+      const saved = await saveApplicationForm(applicationId, request)
+      if (!file) {
+        return saved
+      }
+      try {
+        await uploadDocumentEvidence(applicationId, file)
+      } catch (cause) {
+        throw new DocumentUploadError(saved, cause)
+      }
+      return { ...saved, documentEvidencePresent: true }
+    },
+    onSuccess: (saved, { intent, file }) => {
+      keepSaved(saved)
+      if (file) {
+        setDocumentFile(null)
+        setDocumentInputKey((key) => key + 1)
+      }
       if (intent === 'continue') {
         void navigate(nextHref)
       } else {
-        setNotice('Your answers have been saved.')
+        setNotice(
+          file
+            ? 'Your answers and document have been saved.'
+            : 'Your answers have been saved.',
+        )
+      }
+    },
+    onError: (error) => {
+      if (error instanceof DocumentUploadError) {
+        keepSaved(error.savedForm)
       }
     },
   })
@@ -89,12 +139,18 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
     if (save.isPending || reload.isPending) {
       return
     }
+    const fileError = documentFile && documentFileError(documentFile)
+    if (fileError) {
+      showFieldErrors({ document: fileError })
+      return
+    }
     setNotice(undefined)
     save.mutate({
       step,
       answers: answersForStep(step, values),
       version,
       intent,
+      file: documentFile,
     })
   }
 
@@ -167,16 +223,49 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
                 I confirm these details are accurate and belong to me.
               </label>
             ) : (
-              <>
-                <label htmlFor="document-evidence">
+              <div className={styles.documentField}>
+                <label htmlFor={documentInputId}>
                   Document evidence (required)
                 </label>
+                <Typography
+                  id={`${documentInputId}-description`}
+                  tone="muted"
+                  variant="caption"
+                >
+                  {documentPresent
+                    ? 'A document is already on file. Choose a new image only if you want to replace it.'
+                    : 'Upload a JPG or PNG image of your identity document, up to 10 MB.'}
+                </Typography>
+                {fieldErrors.document ? (
+                  <Typography
+                    className={styles.fieldError}
+                    id={`${documentInputId}-error`}
+                    variant="caption"
+                  >
+                    {fieldErrors.document}
+                  </Typography>
+                ) : null}
                 <input
-                  id="document-evidence"
+                  accept={acceptedDocumentTypes.join(',')}
+                  aria-describedby={[
+                    `${documentInputId}-description`,
+                    fieldErrors.document && `${documentInputId}-error`,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-invalid={fieldErrors.document ? true : undefined}
+                  id={documentInputId}
+                  key={documentInputKey}
+                  name="file"
+                  onChange={(event) => {
+                    setDocumentFile(event.target.files?.[0] ?? null)
+                    clearFieldError('document')
+                    setNotice(undefined)
+                  }}
+                  required={!documentPresent}
                   type="file"
-                  accept="image/jpeg,image/png"
                 />
-              </>
+              </div>
             )}
             {save.isError ? (
               <Alert severity="error">
@@ -252,6 +341,14 @@ function saveErrorMessage(
   error: Error,
   actions: { signInHref: string; reloadAction: ReactNode },
 ): ReactNode {
+  if (error instanceof DocumentUploadError) {
+    return (
+      <>
+        Your answers were saved, but your document was not uploaded.{' '}
+        {documentUploadReason(error.cause, actions.signInHref)}
+      </>
+    )
+  }
   if (
     isSessionExpired(error) ||
     (error instanceof ApiError && error.status === 403)
@@ -295,4 +392,22 @@ function saveErrorMessage(
       .join(' ')
   }
   return `We could not save your answers. ${requestFailureMessage(error)} Your answers are still on this page.`
+}
+
+function documentUploadReason(cause: unknown, signInHref: string): ReactNode {
+  if (
+    isSessionExpired(cause) ||
+    (cause instanceof ApiError && cause.status === 403)
+  ) {
+    return (
+      <>
+        Your session has ended. <Link href={signInHref}>Sign in again</Link> to
+        upload it.
+      </>
+    )
+  }
+  if (cause instanceof ApiError && cause.status === 422) {
+    return `${cause.errors[0]?.detail ?? 'The image was not accepted.'} Choose a JPG or PNG image up to 10 MB and save again.`
+  }
+  return `${requestFailureMessage(cause)} Choose Save to try again.`
 }
