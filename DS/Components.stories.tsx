@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Button } from './Button'
+import { ConfirmDialog } from './ConfirmDialog'
 import {
   Alert,
   Box,
@@ -44,6 +45,10 @@ export const ButtonQuiet: Story = {
 export const ButtonDisabled: Story = {
   name: 'Button / disabled',
   render: () => <Button isDisabled>Unavailable</Button>,
+}
+export const Confirmation: Story = {
+  name: 'ConfirmDialog',
+  render: () => <ConfirmDialogStory />,
 }
 export const Select: Story = {
   name: 'SelectField',
@@ -153,5 +158,24 @@ function SelectStory() {
         { value: 'approved', label: 'Approved' },
       ]}
     />
+  )
+}
+
+function ConfirmDialogStory() {
+  const [isOpen, setOpen] = useState(false)
+  return (
+    <>
+      <Button onPress={() => setOpen(true)}>Leave page</Button>
+      <ConfirmDialog
+        cancelLabel="Stay on this page"
+        confirmLabel="Leave without saving"
+        isOpen={isOpen}
+        onCancel={() => setOpen(false)}
+        onConfirm={() => setOpen(false)}
+        title="Leave without saving?"
+      >
+        Your changes on this step have not been saved.
+      </ConfirmDialog>
+    </>
   )
 }
