@@ -36,12 +36,26 @@ describe('validateRegistration', () => {
     })
   })
 
-  it('rejects an email address without a domain', () => {
-    expect(validateRegistration({ ...valid, email: 'ada@' })).toMatchObject({
+  it.each([
+    'ada@',
+    'ada@localhost',
+    'ada lovelace@example.com',
+    '@example.com',
+  ])('rejects the email address %s', (email) => {
+    expect(validateRegistration({ ...valid, email })).toMatchObject({
       errors: {
         email: 'Enter an email address in the format name@example.com.',
       },
     })
+  })
+
+  it.each([
+    'user@bücher.de',
+    'jöhn@example.com',
+    'a@b.c',
+    "o'brien@example.ie",
+  ])('accepts the email address %s, as the API does', (email) => {
+    expect(validateRegistration({ ...valid, email }).success).toBe(true)
   })
 
   it.each([

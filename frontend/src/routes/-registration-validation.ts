@@ -14,6 +14,13 @@ export type RegistrationErrors = Partial<Record<RegistrationField, string>>
 export const passwordPolicy =
   'Use at least 6 characters, including an uppercase letter and a special character.'
 
+/**
+ * Same shape the API accepts: text, @, and a domain containing a dot, with no
+ * whitespace. Stricter checks would reject addresses the API allows, such as
+ * internationalized domains.
+ */
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const passwordSchema = z
   .string()
   .min(1, 'Enter a password.')
@@ -30,7 +37,10 @@ const registrationSchema = z
       .string()
       .trim()
       .min(1, 'Enter your email address.')
-      .pipe(z.email('Enter an email address in the format name@example.com.')),
+      .regex(
+        emailPattern,
+        'Enter an email address in the format name@example.com.',
+      ),
     password: passwordSchema,
     passwordConfirmation: z.string().min(1, 'Confirm your password.'),
   })
