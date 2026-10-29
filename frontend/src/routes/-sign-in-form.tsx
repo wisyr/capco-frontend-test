@@ -34,8 +34,12 @@ export function SignInForm({ returnTo, notice, onSuccess }: SignInFormProps) {
     email: '',
     password: '',
   })
-  const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
-    useFieldErrors(fieldIds)
+  const {
+    fieldErrors,
+    showFieldErrors,
+    revalidateFieldErrors,
+    clearFieldErrors,
+  } = useFieldErrors(fieldIds)
   const queryClient = useQueryClient()
   const signIn = useMutation({
     // Drop the credentials from the mutation cache once the form unmounts.
@@ -93,9 +97,11 @@ export function SignInForm({ returnTo, notice, onSuccess }: SignInFormProps) {
       id: fieldIds[field],
       name: field,
       onChange: (event: ChangeEvent<HTMLInputElement>) => {
-        const { value } = event.target
-        setValues((current) => ({ ...current, [field]: value }))
-        clearFieldError(field)
+        const next = { ...values, [field]: event.target.value }
+        setValues(next)
+        revalidateFieldErrors(
+          requiredFieldErrors({ ...next, email: next.email.trim() }) ?? {},
+        )
       },
       required: true,
       value: values[field],

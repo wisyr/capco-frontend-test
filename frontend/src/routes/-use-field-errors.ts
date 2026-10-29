@@ -23,6 +23,24 @@ export function useFieldErrors<Field extends string>(
     }
   }
 
+  /**
+   * Checks the fields that already show an error against `errors`. Fixing a
+   * value clears its error at once, and a still-invalid value keeps an
+   * up-to-date message. Fields without an error stay quiet until the next
+   * submit, so nobody is told off for a value they are still typing.
+   */
+  function revalidateFieldErrors(errors: FieldErrors<Field>) {
+    setFieldErrors((current) => {
+      const next: FieldErrors<Field> = {}
+      for (const field of Object.keys(current) as Field[]) {
+        if (current[field]) {
+          next[field] = errors[field]
+        }
+      }
+      return next
+    })
+  }
+
   function clearFieldError(field: Field) {
     setFieldErrors((current) => ({ ...current, [field]: undefined }))
   }
@@ -31,5 +49,11 @@ export function useFieldErrors<Field extends string>(
     setFieldErrors({})
   }
 
-  return { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors }
+  return {
+    fieldErrors,
+    showFieldErrors,
+    revalidateFieldErrors,
+    clearFieldError,
+    clearFieldErrors,
+  }
 }

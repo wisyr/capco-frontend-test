@@ -39,8 +39,12 @@ const fieldIds: Record<RegistrationField, string> = {
 export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
   const signInHref = accountAccessHref('/sign-in', returnTo)
   const [values, setValues] = useState(emptyValues)
-  const { fieldErrors, showFieldErrors, clearFieldError, clearFieldErrors } =
-    useFieldErrors(fieldIds)
+  const {
+    fieldErrors,
+    showFieldErrors,
+    revalidateFieldErrors,
+    clearFieldErrors,
+  } = useFieldErrors(fieldIds)
   const registration = useMutation({
     // Drop the credentials from the mutation cache once the form unmounts.
     gcTime: 0,
@@ -74,9 +78,12 @@ export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
       id: fieldIds[field],
       name: field,
       onChange: (event: ChangeEvent<HTMLInputElement>) => {
-        const { value } = event.target
-        setValues((current) => ({ ...current, [field]: value }))
-        clearFieldError(field)
+        const next = { ...values, [field]: event.target.value }
+        setValues(next)
+        // Re-check every field with an error, not just this one: editing the
+        // password can fix or break the confirmation.
+        const result = validateRegistration(next)
+        revalidateFieldErrors(result.success ? {} : result.errors)
       },
       required: true,
       value: values[field],
