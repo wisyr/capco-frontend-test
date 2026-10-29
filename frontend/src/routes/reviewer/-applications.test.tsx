@@ -1,8 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Link, Outlet } from 'react-router'
 import { expect, describe, it, vi } from 'vitest'
 
-import {
+import { renderRoutes } from '../../test/render-routes'
+
+import ReviewerApplicationsPage, {
+  clientLoader,
   parseReviewerApplicationsSearch,
   ReviewerApplicationsView,
   type ReviewerApplicationsResponse,
@@ -177,5 +181,39 @@ describe('Reviewer applications overview', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Applications could not be loaded',
     )
+  })
+
+  it('shows the search from the URL when it changes outside the field', async () => {
+    const { user } = renderRoutes(
+      [
+        {
+          Component: () => (
+            <>
+              <Link to="/reviewer/applications?q=Grace">Search for Grace</Link>
+              <Outlet />
+            </>
+          ),
+          children: [
+            {
+              path: '/reviewer/applications',
+              Component: ReviewerApplicationsPage,
+              // The real route has no server loader; SPA mode never calls it.
+              loader: (args) =>
+                clientLoader({ ...args, serverLoader: async () => undefined }),
+            },
+          ],
+        },
+      ],
+      '/reviewer/applications?q=Ada',
+    )
+
+    const search = await screen.findByRole('textbox', { name: 'Search' })
+    expect(search).toHaveValue('Ada')
+    await user.type(search, 'm')
+    expect(search).toHaveValue('Adam')
+
+    await user.click(screen.getByRole('link', { name: 'Search for Grace' }))
+
+    await vi.waitFor(() => expect(search).toHaveValue('Grace'))
   })
 })
