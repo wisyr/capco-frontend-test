@@ -8,6 +8,7 @@ import { requestFailureMessage } from '../api/request-failure-message'
 
 import { AccountAccessCard } from './-account-access-card'
 import { credentialFieldErrors } from './-credential-field-errors'
+import { PendingStatus } from './-pending-status'
 import {
   passwordPolicy,
   validateRegistration,
@@ -158,6 +159,9 @@ export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
         >
           {registration.isPending ? 'Creating account…' : 'Create account'}
         </Button>
+        <PendingStatus
+          message={registration.isPending ? 'Creating account…' : undefined}
+        />
         <Typography className={styles.footer} align="center" variant="caption">
           <span>Already have an account? </span>
           <Link href={signInHref}>Sign in</Link>

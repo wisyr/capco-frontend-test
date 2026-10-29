@@ -8,6 +8,7 @@ import { requestFailureMessage } from '../api/request-failure-message'
 
 import { AccountAccessCard } from './-account-access-card'
 import { credentialFieldErrors } from './-credential-field-errors'
+import { PendingStatus } from './-pending-status'
 import { accountAccessHref, isSafeJourneyPath } from './-return-target'
 import { useFieldErrors, type FieldErrors } from './-use-field-errors'
 import styles from './account-access.module.css'
@@ -137,6 +138,7 @@ export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
         >
           {signIn.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
+        <PendingStatus message={signIn.isPending ? 'Signing in…' : undefined} />
         <Typography className={styles.footer} align="center" variant="caption">
           <span>New to KYC? </span>
           <Link href={accountAccessHref('/create-account', returnTo)}>

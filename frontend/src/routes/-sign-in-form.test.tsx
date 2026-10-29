@@ -190,6 +190,24 @@ describe('SignInForm', () => {
     expect(requests).toBe(1)
   })
 
+  it('announces the pending state when submitted from a field', async () => {
+    server.use(
+      http.post(SESSIONS_URL, async () => {
+        await delay(50)
+        return sessionCreated()
+      }),
+    )
+    const { user, onSuccess } = renderForm()
+
+    await fillForm(user)
+    await user.keyboard('{Enter}')
+
+    expect(passwordInput()).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent('Signing in…')
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
   it('rejects invalid credentials without revealing which one was wrong', async () => {
     respondWith(401, {
       errors: [

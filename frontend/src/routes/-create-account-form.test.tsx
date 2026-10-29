@@ -182,6 +182,23 @@ describe('CreateAccountForm', () => {
     expect(requests).toBe(1)
   })
 
+  it('announces the pending state when submitted from a field', async () => {
+    server.use(
+      http.post(ACCOUNTS_URL, async () => {
+        await delay(50)
+        return new HttpResponse(null, { status: 201 })
+      }),
+    )
+    const { user } = renderForm()
+
+    await fillValidForm(user)
+    await user.keyboard('{Enter}')
+
+    expect(confirmationInput()).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent('Creating account…')
+    await screen.findByRole('heading', { name: 'Account created' })
+  })
+
   it('shows API validation errors beside the matching fields', async () => {
     respondWith(400, {
       errors: [
