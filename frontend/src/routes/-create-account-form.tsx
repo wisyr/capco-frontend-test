@@ -14,17 +14,13 @@ import { accountAccessHref } from './-return-target'
 import styles from './account-access.module.css'
 
 export interface CreateAccountFormProps {
-  onNavigate?: (href: string) => void
   returnTo?: string
 }
 
 const passwordGuidance =
   'Use at least six characters, including one uppercase letter and one special character.'
 
-export function CreateAccountForm({
-  onNavigate,
-  returnTo,
-}: CreateAccountFormProps) {
+export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string>()
@@ -137,15 +133,7 @@ export function CreateAccountForm({
               variant="caption"
             >
               <span>Already have an account? </span>
-              <Link
-                href={accountAccessHref('/sign-in', returnTo)}
-                onClick={(event) => {
-                  if (onNavigate) {
-                    event.preventDefault()
-                    onNavigate(accountAccessHref('/sign-in', returnTo))
-                  }
-                }}
-              >
+              <Link href={accountAccessHref('/sign-in', returnTo)}>
                 Sign in
               </Link>
             </Typography>
