@@ -1,18 +1,32 @@
-import { Alert, Button, Typography } from '@kyc/ui'
+import { Alert, Button, ConfirmDialog, Typography } from '@kyc/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
-import { Outlet, useNavigate } from 'react-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Outlet, useBlocker, useNavigate } from 'react-router'
 
 import { deleteApplicantSession } from '../api/applicant-sessions'
 import { requestFailureMessage } from '../api/request-failure-message'
 
 import styles from './applicant-header.module.css'
 import { isSessionExpired } from './applications/-session'
+import { UnsavedChangesContext } from './applications/-unsaved-changes'
 
 export default function ApplicationsLayout() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const signedOut = useRef(false)
+  // A ref, not state: a step clears it right before navigating after a save,
+  // and the blocker must see that in the same event.
+  const unsavedChanges = useRef(false)
+  const reportUnsavedChanges = useCallback((hasUnsavedChanges: boolean) => {
+    unsavedChanges.current = hasUnsavedChanges
+  }, [])
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const leaveBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      unsavedChanges.current &&
+      !signedOut.current &&
+      currentLocation.pathname !== nextLocation.pathname,
+  )
 
   // Forget cached applicant data only once the journey has unmounted.
   // Removing queries a page still observes makes it refetch them straight
@@ -47,7 +61,15 @@ export default function ApplicationsLayout() {
         <Button
           className={styles.signOut}
           isPending={signOut.isPending}
-          onPress={() => signOut.mutate()}
+          onPress={() => {
+            // Ask before ending the session, while the answers can still be
+            // saved.
+            if (unsavedChanges.current) {
+              setConfirmingSignOut(true)
+            } else {
+              signOut.mutate()
+            }
+          }}
           variant="secondary"
         >
           Sign out
@@ -58,7 +80,34 @@ export default function ApplicationsLayout() {
           We could not sign you out. {requestFailureMessage(signOut.error)}
         </Alert>
       ) : null}
-      <Outlet />
+      <UnsavedChangesContext value={reportUnsavedChanges}>
+        <Outlet />
+      </UnsavedChangesContext>
+      <ConfirmDialog
+        cancelLabel="Stay on this page"
+        confirmLabel="Leave without saving"
+        isOpen={leaveBlocker.state === 'blocked'}
+        onCancel={() => leaveBlocker.reset?.()}
+        onConfirm={() => leaveBlocker.proceed?.()}
+        title="Leave without saving?"
+      >
+        Your changes on this step have not been saved. If you leave now, they
+        will be lost.
+      </ConfirmDialog>
+      <ConfirmDialog
+        cancelLabel="Stay on this page"
+        confirmLabel="Sign out without saving"
+        isOpen={confirmingSignOut}
+        onCancel={() => setConfirmingSignOut(false)}
+        onConfirm={() => {
+          setConfirmingSignOut(false)
+          signOut.mutate()
+        }}
+        title="Sign out without saving?"
+      >
+        Your changes on this step have not been saved. If you sign out now, they
+        will be lost.
+      </ConfirmDialog>
     </>
   )
 }

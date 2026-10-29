@@ -33,6 +33,7 @@ import {
   DocumentUploadError,
 } from './-document-evidence'
 import { isSessionExpired } from './-session'
+import { useUnsavedChangesGuard } from './-unsaved-changes'
 
 export interface StepFormProps {
   applicationId: string
@@ -52,6 +53,10 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
   const queryClient = useQueryClient()
   const formQuery = applicationFormQuery(applicationId)
   const [values, setValues] = useState(() => valuesFromAnswers(form.answers))
+  // What the API last confirmed for this step, to tell unsaved edits apart.
+  const [savedAnswers, setSavedAnswers] = useState(() =>
+    answersForStep(step, valuesFromAnswers(form.answers)),
+  )
   // The version these answers are based on. Background refetches must not
   // advance it, or a save could overwrite changes made somewhere else.
   const [version, setVersion] = useState(form.version)
@@ -65,6 +70,12 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
   const { fieldErrors, showFieldErrors, clearFieldError } = useFieldErrors({
     document: documentInputId,
   })
+
+  const hasUnsavedChanges =
+    documentFile !== null ||
+    JSON.stringify(answersForStep(step, values)) !==
+      JSON.stringify(savedAnswers)
+  const reportUnsavedChanges = useUnsavedChangesGuard(hasUnsavedChanges)
 
   const stepNumber = applicationSteps.indexOf(step) + 1
   const title = stepTitles[step]
@@ -102,13 +113,15 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
       }
       return { ...saved, documentEvidencePresent: true }
     },
-    onSuccess: (saved, { intent, file }) => {
+    onSuccess: (saved, { intent, file, answers }) => {
       keepSaved(saved)
+      setSavedAnswers(answers)
       if (file) {
         setDocumentFile(null)
         setDocumentInputKey((key) => key + 1)
       }
       if (intent === 'continue') {
+        reportUnsavedChanges(false)
         void navigate(nextHref)
       } else {
         setNotice(
@@ -118,9 +131,10 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
         )
       }
     },
-    onError: (error) => {
+    onError: (error, { answers }) => {
       if (error instanceof DocumentUploadError) {
         keepSaved(error.savedForm)
+        setSavedAnswers(answers)
       }
     },
   })
@@ -128,7 +142,9 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
   const reload = useMutation({
     mutationFn: () => queryClient.fetchQuery({ ...formQuery, staleTime: 0 }),
     onSuccess: (latest) => {
-      setValues(valuesFromAnswers(latest.answers))
+      const latestValues = valuesFromAnswers(latest.answers)
+      setValues(latestValues)
+      setSavedAnswers(answersForStep(step, latestValues))
       setVersion(latest.version)
       save.reset()
       setNotice('The latest saved answers have been loaded.')

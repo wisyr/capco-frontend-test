@@ -72,3 +72,26 @@ test('an expired session keeps the entered answers and explains what to do', asy
   await expect(page.getByText('Your answers have been saved.')).toBeHidden()
   await expect(field(page, 'Name')).toHaveValue('Grace Hopper')
 })
+
+test('leaving a step with unsaved answers asks first', async ({ page }) => {
+  await startNewApplication(page)
+  await field(page, 'Name').fill('Katherine Johnson')
+
+  await page.getByRole('button', { name: 'Back' }).click()
+  const dialog = page.getByRole('alertdialog', {
+    name: 'Leave without saving?',
+  })
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByRole('button', { name: 'Stay on this page' }),
+  ).toBeFocused()
+  await page.keyboard.press('Escape')
+
+  await expect(dialog).toBeHidden()
+  await expect(field(page, 'Name')).toHaveValue('Katherine Johnson')
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Your answers have been saved.')).toBeVisible()
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect(page).toHaveURL(/\/applications\/current$/)
+})
