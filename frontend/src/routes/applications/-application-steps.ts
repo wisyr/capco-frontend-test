@@ -9,6 +9,8 @@ export interface TextFieldDefinition {
   /** WCAG 1.3.5: lets browsers and assistive tech identify the purpose. */
   autoComplete?: string
   type?: 'email' | 'tel'
+  /** WCAG 3.3.2: states the expected format where one is needed. */
+  hint?: string
 }
 
 export const stepFields: Record<
@@ -17,7 +19,12 @@ export const stepFields: Record<
 > = {
   'personal-details': [
     { name: 'name', label: 'Name', autoComplete: 'name' },
-    { name: 'dateOfBirth', label: 'Date of birth', autoComplete: 'bday' },
+    {
+      name: 'dateOfBirth',
+      label: 'Date of birth',
+      autoComplete: 'bday',
+      hint: 'Use year-month-day, for example 1990-04-23.',
+    },
     { name: 'country', label: 'Country', autoComplete: 'country-name' },
     { name: 'nationality', label: 'Nationality' },
     { name: 'email', label: 'Email', autoComplete: 'email', type: 'email' },
@@ -27,7 +34,11 @@ export const stepFields: Record<
     { name: 'documentType', label: 'Document type' },
     { name: 'documentNumber', label: 'Document number' },
     { name: 'documentCountry', label: 'Document country' },
-    { name: 'expiry', label: 'Expiry' },
+    {
+      name: 'expiry',
+      label: 'Expiry',
+      hint: 'Use year-month-day, for example 2031-08-31.',
+    },
     { name: 'street', label: 'Street', autoComplete: 'street-address' },
     { name: 'city', label: 'City', autoComplete: 'address-level2' },
     { name: 'postal', label: 'Postal code', autoComplete: 'postal-code' },

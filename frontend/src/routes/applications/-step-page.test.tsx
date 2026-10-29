@@ -58,6 +58,21 @@ describe('ApplicationStepPage loading', () => {
     expect(await field('Residential country')).toHaveValue('United Kingdom')
   })
 
+  it.each([
+    ['personal-details', 'Date of birth', '1990-04-23'],
+    ['identity-and-address', 'Expiry', '2031-08-31'],
+  ] as const)(
+    'explains the date format expected on %s',
+    async (step, label, example) => {
+      server.use(http.get(FORM_URL, () => HttpResponse.json(formDocument())))
+      renderStep(step)
+
+      expect(await field(label)).toHaveAccessibleDescription(
+        `Use year-month-day, for example ${example}.`,
+      )
+    },
+  )
+
   it('leaves unanswered fields empty', async () => {
     server.use(
       http.get(FORM_URL, () =>

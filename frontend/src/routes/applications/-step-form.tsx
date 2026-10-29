@@ -192,19 +192,22 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
             }}
             spacing={2}
           >
-            {stepFields[step].map(({ name, label, autoComplete, type }) => (
-              <TextField
-                autoComplete={autoComplete}
-                id={`answer-${name}`}
-                key={name}
-                label={`${label} (required)`}
-                name={name}
-                onChange={(event) => setText(name, event.target.value)}
-                required
-                type={type}
-                value={values.text[name]}
-              />
-            ))}
+            {stepFields[step].map(
+              ({ name, label, autoComplete, type, hint }) => (
+                <TextField
+                  autoComplete={autoComplete}
+                  helperText={hint}
+                  id={`answer-${name}`}
+                  key={name}
+                  label={`${label} (required)`}
+                  name={name}
+                  onChange={(event) => setText(name, event.target.value)}
+                  required
+                  type={type}
+                  value={values.text[name]}
+                />
+              ),
+            )}
             {isFirstStep ? (
               <label>
                 <input
