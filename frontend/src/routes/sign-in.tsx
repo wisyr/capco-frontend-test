@@ -15,7 +15,8 @@ export default function SignInRoute({ loaderData }: Route.ComponentProps) {
   return (
     <SignInForm
       onSuccess={(href) => {
-        void navigate(href)
+        // Replace sign-in in history so Back does not return to the form.
+        void navigate(href, { replace: true })
       }}
       returnTo={loaderData.returnTo}
     />
