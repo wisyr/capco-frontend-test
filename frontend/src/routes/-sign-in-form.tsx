@@ -14,16 +14,11 @@ import { accountAccessHref, isSafeJourneyPath } from './-return-target'
 import styles from './account-access.module.css'
 
 export interface SignInFormProps {
-  onNavigate?: (href: string) => void
   returnTo?: string
   onSuccess: (href: string) => void
 }
 
-export function SignInForm({
-  onNavigate,
-  returnTo,
-  onSuccess,
-}: SignInFormProps) {
+export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string>()
@@ -134,15 +129,7 @@ export function SignInForm({
               variant="caption"
             >
               <span>New to KYC? </span>
-              <Link
-                href={accountAccessHref('/create-account', returnTo)}
-                onClick={(event) => {
-                  if (onNavigate) {
-                    event.preventDefault()
-                    onNavigate(accountAccessHref('/create-account', returnTo))
-                  }
-                }}
-              >
+              <Link href={accountAccessHref('/create-account', returnTo)}>
                 Create account
               </Link>
             </Typography>

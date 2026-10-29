@@ -8,150 +8,228 @@ import {
   TextField,
   Typography,
 } from '@kyc/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 
+import { createApplicantAccount } from '../api/applicant-accounts'
+import { ApiError } from '../api/json-api-client'
+import { requestFailureMessage } from '../api/request-failure-message'
+
+import {
+  passwordPolicy,
+  validateRegistration,
+  type RegistrationErrors,
+  type RegistrationField,
+  type RegistrationValues,
+} from './-registration-validation'
 import { accountAccessHref } from './-return-target'
 import styles from './account-access.module.css'
 
 export interface CreateAccountFormProps {
-  onNavigate?: (href: string) => void
   returnTo?: string
 }
 
-const passwordGuidance =
-  'Use at least six characters, including one uppercase letter and one special character.'
+const emptyValues: RegistrationValues = {
+  email: '',
+  password: '',
+  passwordConfirmation: '',
+}
 
-export function CreateAccountForm({
-  onNavigate,
-  returnTo,
-}: CreateAccountFormProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string>()
-  const [emailError, setEmailError] = useState<string>()
-  const [passwordError, setPasswordError] = useState<string>()
-  const [successMessage, setSuccessMessage] = useState<string>()
-  const emailInput = useRef<HTMLInputElement>(null)
-  const passwordInput = useRef<HTMLInputElement>(null)
+/** Order in which focus moves to the first invalid field. */
+const fieldOrder: readonly RegistrationField[] = [
+  'email',
+  'password',
+  'passwordConfirmation',
+]
 
-  useEffect(() => {
-    if (emailError) {
-      emailInput.current?.focus()
-    } else if (passwordError) {
-      passwordInput.current?.focus()
-    }
-  }, [emailError, passwordError])
+const fieldIds: Record<RegistrationField, string> = {
+  email: 'applicant-email',
+  password: 'applicant-password',
+  passwordConfirmation: 'applicant-password-confirmation',
+}
 
-  async function submit(): Promise<void> {
-    setError(undefined)
-    setEmailError(undefined)
-    setPasswordError(undefined)
-    setSuccessMessage(undefined)
+export function CreateAccountForm({ returnTo }: CreateAccountFormProps) {
+  const signInHref = accountAccessHref('/sign-in', returnTo)
+  const [values, setValues] = useState(emptyValues)
+  const [fieldErrors, setFieldErrors] = useState<RegistrationErrors>({})
+  const registration = useMutation({
+    mutationFn: createApplicantAccount,
+    onSuccess: () => setValues(emptyValues),
+    onError: (error) => {
+      const apiFieldErrors = registrationFieldErrors(error)
+      if (apiFieldErrors) {
+        showFieldErrors(apiFieldErrors)
+      }
+    },
+  })
 
-    try {
-      setPassword('')
-      setSuccessMessage(
-        'Account form is ready. Sign-in is available for this prototype.',
-      )
-    } catch {
-      setError('Account form could not be completed.')
+  /** Renders the errors before moving focus so the field announces them. */
+  function showFieldErrors(errors: RegistrationErrors) {
+    flushSync(() => setFieldErrors(errors))
+    const firstInvalid = fieldOrder.find((field) => errors[field])
+    if (firstInvalid) {
+      document.getElementById(fieldIds[firstInvalid])?.focus()
     }
   }
 
+  function submit() {
+    if (registration.isPending) {
+      return
+    }
+    const result = validateRegistration(values)
+    if (!result.success) {
+      showFieldErrors(result.errors)
+      return
+    }
+    setFieldErrors({})
+    registration.mutate(result.credentials)
+  }
+
+  function fieldProps(field: RegistrationField) {
+    return {
+      error: Boolean(fieldErrors[field]),
+      fullWidth: true,
+      id: fieldIds[field],
+      name: field,
+      onChange: (event: ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target
+        setValues((current) => ({ ...current, [field]: value }))
+        setFieldErrors((current) => ({ ...current, [field]: undefined }))
+      },
+      required: true,
+      value: values[field],
+    }
+  }
+
+  if (registration.isSuccess) {
+    return (
+      <AccountAccessCard>
+        <title>Account created | KYC</title>
+        <div className={styles.focusTarget} ref={focusOnMount} tabIndex={-1}>
+          <Stack spacing={3}>
+            <Stack spacing={1}>
+              <Typography component="h1" variant="heading">
+                Account created
+              </Typography>
+              <Typography tone="muted">
+                Your account for {registration.variables.email} is ready. Sign
+                in to start your KYC application.
+              </Typography>
+            </Stack>
+            <Link href={signInHref}>Sign in</Link>
+          </Stack>
+        </div>
+      </AccountAccessCard>
+    )
+  }
+
+  const formError = registration.isError
+    ? registrationFormError(registration.error, signInHref)
+    : undefined
+
+  return (
+    <AccountAccessCard>
+      <title>Create your account | KYC</title>
+      <Stack
+        component="form"
+        className={styles.form}
+        onSubmit={(event) => {
+          event.preventDefault()
+          submit()
+        }}
+        spacing={3}
+      >
+        <Stack spacing={1}>
+          <Typography component="h1" variant="heading">
+            Create your account
+          </Typography>
+          <Typography tone="muted">
+            Create credentials to begin your KYC application.
+          </Typography>
+        </Stack>
+        {formError ? <Alert severity="error">{formError}</Alert> : null}
+        <TextField
+          {...fieldProps('email')}
+          autoComplete="email"
+          helperText={fieldErrors.email}
+          label="Email address"
+          spellCheck={false}
+          type="email"
+        />
+        <TextField
+          {...fieldProps('password')}
+          autoComplete="new-password"
+          helperText={fieldErrors.password ?? passwordPolicy}
+          label="Password"
+          type="password"
+        />
+        <TextField
+          {...fieldProps('passwordConfirmation')}
+          autoComplete="new-password"
+          helperText={fieldErrors.passwordConfirmation}
+          label="Confirm password"
+          type="password"
+        />
+        <Button
+          className={styles.submit}
+          fullWidth
+          isPending={registration.isPending}
+          size="large"
+          type="submit"
+        >
+          {registration.isPending ? 'Creating account…' : 'Create account'}
+        </Button>
+        <Typography className={styles.footer} align="center" variant="caption">
+          <span>Already have an account? </span>
+          <Link href={signInHref}>Sign in</Link>
+        </Typography>
+      </Stack>
+    </AccountAccessCard>
+  )
+}
+
+function AccountAccessCard({ children }: { children: ReactNode }) {
   return (
     <main className={styles.page}>
       <Card className={styles.card}>
-        <CardContent className={styles.cardContent}>
-          <Stack
-            component="form"
-            className={styles.form}
-            onSubmit={(event) => {
-              event.preventDefault()
-              void submit()
-            }}
-            spacing={3}
-          >
-            <Stack spacing={1}>
-              <Typography component="h1" variant="heading">
-                Create your account
-              </Typography>
-              <Typography tone="muted">
-                Create credentials to begin your KYC application.
-              </Typography>
-            </Stack>
-            {(error ?? emailError ?? passwordError) ? (
-              <Alert aria-live="assertive" role="alert" severity="error">
-                {error ?? emailError ?? passwordError}
-              </Alert>
-            ) : null}
-            {successMessage ? (
-              <Alert aria-live="polite" role="status" severity="success">
-                {successMessage}
-              </Alert>
-            ) : null}
-            <TextField
-              autoComplete="email"
-              error={Boolean(emailError)}
-              fullWidth
-              helperText={emailError}
-              id="applicant-email"
-              inputRef={emailInput}
-              label="Email address"
-              name="email"
-              onChange={(event) => {
-                setEmail(event.target.value)
-                setEmailError(undefined)
-              }}
-              required
-              type="email"
-              value={email}
-            />
-            <TextField
-              autoComplete="new-password"
-              error={Boolean(passwordError)}
-              fullWidth
-              helperText={passwordError ?? passwordGuidance}
-              id="applicant-password"
-              inputRef={passwordInput}
-              label="Password"
-              name="password"
-              onChange={(event) => {
-                setPassword(event.target.value)
-                setPasswordError(undefined)
-              }}
-              required
-              type="password"
-              value={password}
-            />
-            <Button
-              className={styles.submit}
-              fullWidth
-              size="large"
-              type="submit"
-            >
-              Create account
-            </Button>
-            <Typography
-              className={styles.footer}
-              align="center"
-              variant="caption"
-            >
-              <span>Already have an account? </span>
-              <Link
-                href={accountAccessHref('/sign-in', returnTo)}
-                onClick={(event) => {
-                  if (onNavigate) {
-                    event.preventDefault()
-                    onNavigate(accountAccessHref('/sign-in', returnTo))
-                  }
-                }}
-              >
-                Sign in
-              </Link>
-            </Typography>
-          </Stack>
-        </CardContent>
+        <CardContent className={styles.cardContent}>{children}</CardContent>
       </Card>
     </main>
   )
+}
+
+function focusOnMount(element: HTMLElement | null) {
+  element?.focus()
+}
+
+/** Field errors from a 400 response, or undefined when none map to a field. */
+function registrationFieldErrors(error: Error): RegistrationErrors | undefined {
+  if (!(error instanceof ApiError) || error.status !== 400) {
+    return undefined
+  }
+  const { email, password } = error.attributeErrors()
+  return email || password ? { email, password } : undefined
+}
+
+/** Form-level feedback for failures that are not shown beside a field. */
+function registrationFormError(
+  error: Error,
+  signInHref: string,
+): ReactNode | undefined {
+  if (registrationFieldErrors(error)) {
+    return undefined
+  }
+  if (error instanceof ApiError && error.hasCode('email-already-registered')) {
+    return (
+      <>
+        An account already exists for this email address.{' '}
+        <Link href={signInHref}>Sign in</Link> or use a different email address.
+      </>
+    )
+  }
+  if (error instanceof ApiError && error.status === 400) {
+    return 'We could not process your details. Check them and try again.'
+  }
+  return requestFailureMessage(error)
 }

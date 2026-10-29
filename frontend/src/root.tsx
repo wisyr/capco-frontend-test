@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
+import { RouterProvider } from 'react-aria-components'
 import {
   isRouteErrorResponse,
   Links,
@@ -7,6 +8,8 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useHref,
+  useNavigate,
   useRouteError,
 } from 'react-router'
 import './styles.css'
@@ -33,9 +36,18 @@ export default function App() {
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { mutations: { retry: false } } }),
   )
+  const navigate = useNavigate()
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      {/* Lets React Aria components with an href, such as Link, use client-side routing. */}
+      <RouterProvider
+        navigate={(href) => {
+          void navigate(href)
+        }}
+        useHref={useHref}
+      >
+        <Outlet />
+      </RouterProvider>
     </QueryClientProvider>
   )
 }
