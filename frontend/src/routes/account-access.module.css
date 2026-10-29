@@ -36,3 +36,8 @@
     padding: 40px;
   }
 }
+
+/* Receives focus programmatically when the success message replaces the form. */
+.focusTarget:focus {
+  outline: none;
+}
