@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { delay, http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { LocationProbe, renderRoutes } from '../../test/render-routes'
 import { server } from '../../test/server'
@@ -158,6 +158,40 @@ describe('CurrentApplicationJourneyPage', () => {
     expect(
       await screen.findByRole('button', { name: 'Start application' }),
     ).toBeInTheDocument()
+  })
+
+  it('keeps showing the draft when a background refetch fails', async () => {
+    server.use(
+      http.get(CURRENT_URL, () =>
+        HttpResponse.json(
+          applicationDocument(
+            `/applications/${APPLICATION_ID}/identity-and-address`,
+          ),
+        ),
+      ),
+    )
+    const { queryClient } = renderJourney()
+    await screen.findByRole('button', { name: 'Resume application' })
+
+    server.use(
+      http.get(CURRENT_URL, () => new HttpResponse(null, { status: 401 })),
+    )
+    await queryClient.refetchQueries()
+    await vi.waitFor(() =>
+      expect(
+        queryClient.getQueryState(['applicant-applications', 'current'])
+          ?.status,
+      ).toBe('error'),
+    )
+    // Give a redirect, if one were rendered, time to navigate.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 100)))
+
+    expect(
+      screen.getByRole('button', { name: 'Resume application' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('status', { name: 'Current location' }),
+    ).not.toBeInTheDocument()
   })
 
   it('refuses a journey URL outside the applicant journey', async () => {

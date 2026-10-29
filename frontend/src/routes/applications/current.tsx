@@ -37,20 +37,25 @@ export default function CurrentApplicationJourneyPage() {
     },
   })
 
-  if (current.isPending) {
-    return <LoadingPage title={pageTitle} message="Loading your application…" />
-  }
-  if (isSessionExpired(current.error) || isSessionExpired(start.error)) {
+  if (isSessionExpired(start.error)) {
     return <SessionExpiredRedirect />
   }
-  if (current.isError) {
-    return (
-      <LoadFailedPage
-        title={pageTitle}
-        message={`We could not load your application. ${requestFailureMessage(current.error)}`}
-        onRetry={() => void current.refetch()}
-      />
-    )
+  // Errors replace the page only before anything has loaded; a failed
+  // background refetch keeps showing the application already on screen.
+  if (current.data === undefined) {
+    if (isSessionExpired(current.error)) {
+      return <SessionExpiredRedirect />
+    }
+    if (current.isError) {
+      return (
+        <LoadFailedPage
+          title={pageTitle}
+          message={`We could not load your application. ${requestFailureMessage(current.error)}`}
+          onRetry={() => void current.refetch()}
+        />
+      )
+    }
+    return <LoadingPage title={pageTitle} message="Loading your application…" />
   }
 
   const application = current.data

@@ -57,8 +57,19 @@ function StepPage({
   const form = useQuery(applicationFormQuery(applicationId))
   const title = stepTitles[step]
 
-  if (form.isPending) {
-    return <LoadingPage title={title} message="Loading your saved answers…" />
+  // Once answers have loaded, keep showing the form. A failed background
+  // refetch (for example on window focus) must not discard what the
+  // applicant is typing; saving reports an ended session instead.
+  if (form.data) {
+    return (
+      <StepForm
+        // A new step or application starts from its own saved answers.
+        key={`${applicationId}/${step}`}
+        applicationId={applicationId}
+        form={form.data}
+        step={step}
+      />
+    )
   }
   if (form.isError) {
     if (isSessionExpired(form.error)) {
@@ -75,13 +86,5 @@ function StepPage({
       />
     )
   }
-  return (
-    <StepForm
-      // A new step or application starts from its own saved answers.
-      key={`${applicationId}/${step}`}
-      applicationId={applicationId}
-      form={form.data}
-      step={step}
-    />
-  )
+  return <LoadingPage title={title} message="Loading your saved answers…" />
 }

@@ -120,6 +120,27 @@ describe('ApplicationStepPage loading', () => {
     expect(await field('Name')).toHaveValue('Ada Lovelace')
   })
 
+  it.each([
+    ['an ended session', 401],
+    ['a server error', 503],
+  ])(
+    'keeps unsaved answers when a background refetch fails with %s',
+    async (_, status) => {
+      server.use(http.get(FORM_URL, () => HttpResponse.json(formDocument())))
+      const { user, queryClient } = renderStep('personal-details')
+      await user.type(await field('Name'), ' unsaved')
+
+      server.use(http.get(FORM_URL, () => new HttpResponse(null, { status })))
+      await queryClient.refetchQueries()
+
+      expect(await field('Name')).toHaveValue('Ada Lovelace unsaved')
+      expect(
+        screen.queryByRole('status', { name: 'Current location' }),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    },
+  )
+
   it('treats an unknown step as a missing page', async () => {
     renderStep('somewhere-else')
 
