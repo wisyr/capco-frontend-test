@@ -13,7 +13,7 @@ expect.extend(toHaveNoViolations)
 
 const SESSIONS_URL = '/api/v1/applicant-sessions'
 
-function renderForm(returnTo?: string) {
+function renderForm(returnTo?: string, notice?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   })
@@ -21,7 +21,7 @@ function renderForm(returnTo?: string) {
   const user = userEvent.setup()
   const view = render(
     <QueryClientProvider client={queryClient}>
-      <SignInForm onSuccess={onSuccess} returnTo={returnTo} />
+      <SignInForm notice={notice} onSuccess={onSuccess} returnTo={returnTo} />
     </QueryClientProvider>,
   )
   return { onSuccess, queryClient, user, ...view }
@@ -86,6 +86,17 @@ describe('SignInForm', () => {
     expect(passwordInput()).toBeRequired()
     expect(passwordInput()).toHaveAttribute('autocomplete', 'current-password')
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('explains why the applicant was sent to sign in', () => {
+    renderForm(
+      '/applications/current',
+      'Your session has ended. Sign in again to continue.',
+    )
+
+    expect(
+      screen.getByText('Your session has ended. Sign in again to continue.'),
+    ).toHaveAttribute('role', 'status')
   })
 
   it('requires both fields before contacting the API', async () => {

@@ -15,6 +15,8 @@ import styles from './account-access.module.css'
 
 export interface SignInFormProps {
   returnTo?: string
+  /** Explains why the applicant was sent to sign in, if they were. */
+  notice?: string
   onSuccess: (href: string) => void
 }
 
@@ -27,7 +29,7 @@ const fieldIds: Record<SignInField, string> = {
   password: 'applicant-password',
 }
 
-export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
+export function SignInForm({ returnTo, notice, onSuccess }: SignInFormProps) {
   const [values, setValues] = useState<SignInValues>({
     email: '',
     password: '',
@@ -117,6 +119,7 @@ export function SignInForm({ returnTo, onSuccess }: SignInFormProps) {
             Sign in to continue your KYC application.
           </Typography>
         </Stack>
+        {notice ? <Alert severity="info">{notice}</Alert> : null}
         {formError ? <Alert severity="error">{formError}</Alert> : null}
         <TextField
           {...fieldProps('email')}
