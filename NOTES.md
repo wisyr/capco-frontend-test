@@ -27,7 +27,11 @@ The work follows the existing layout: route modules handle behaviour, presentati
   - Every response is checked against a Zod schema. Errors become typed classes: `ApiError`, `NetworkError` and `UnexpectedResponseError`.
   - Each resource (`applicant-accounts`, `applicant-sessions`, `applicant-applications`) has its own module with request functions and TanStack Query options.
 - **`query-client.ts`** retries only failures that might be temporary: network errors and 5xx. A 401 or a contract violation fails straight away, so an expired session redirects without delay.
-- **Route helper modules** start with `-`, which React Router ignores as routes. They keep route files small: field errors, the return-target check, session handling, step definitions and page states.
+- **Folder structure.** Pages and logic are kept apart. Tests and styles sit next to the code they cover.
+  - `routes/` holds only the page modules listed in `routes.ts` (for example `applications/layout.tsx` and `applications/step.tsx`), plus the tests that drive them through the router.
+  - `features/<area>/` holds each area's components and logic: `account-access` (registration and sign-in), `applicant-journey` (session handling, the unsaved-changes guard, page states) and `application-form` (steps, validation, document evidence, review).
+  - `shared/` holds small pieces used across features: field errors, the pending-status region and the email pattern.
+  - Features never import from `routes/`, so dependencies only point one way. The starter code's `-` prefix for non-route files is no longer needed.
 - **Server state lives in TanStack Query.** Only the answers being edited are local component state.
 
 ## Key decisions
@@ -59,7 +63,7 @@ The work follows the existing layout: route modules handle behaviour, presentati
 - Each page sets a descriptive `<title>`, and each step's title includes its position, such as "Step 1 of 2".
 - `ConfirmDialog` is an alert dialog named by its heading. It traps focus, starts on the safe action, closes with Escape, and returns focus when it closes.
 - The Sign out button on the blue header uses a high-contrast style with a visible focus outline.
-- jest-axe runs in the component tests. Layouts were checked at 375px wide.
+- jest-axe runs in the component tests, but jsdom cannot check colour contrast. A Playwright scan with `@axe-core/playwright` (`frontend/e2e/accessibility.spec.ts`) therefore checks the real pages in Chromium against WCAG 2.2 A and AA, contrast included. It covers sign-in, registration, the journey page, both steps, the review page, their error states and the leave dialog. React Aria's hidden live region is excluded, because a pending button's announcement there is left unnamed once the button is gone. Layouts were checked at 375px wide.
 
 ## Verification
 
@@ -112,7 +116,7 @@ A newer push to the same branch cancels the older run, and the workflow only has
   - Hiding this only in the UI would not protect anyone. The 409 is visible to anyone who calls the API directly or opens the browser's network tab, so the fix has to be on the server.
   - Sign-in does not reveal it: wrong credentials share one `401` and one message, as TICKET-002 requires.
   - Recommended backend change, out of scope here because the API contract is fixed: answer every registration the same way, for example "Check your email to continue". Then email the owner of an existing account instead of creating a second one. The API's rate limiting (`429`, which the form already explains) slows down automated guessing in the meantime.
-  - If the API changes, the frontend only needs to drop the `email-already-registered` branch in `frontend/src/routes/-create-account-form.tsx` and reword the success screen.
+  - If the API changes, the frontend only needs to drop the `email-already-registered` branch in `frontend/src/features/account-access/create-account-form.tsx` and reword the success screen.
 
 ## Known limitations and out of scope
 

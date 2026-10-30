@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router'
 
-import { accountAccessHref } from '../-return-target'
 import { ApiError } from '../../api/json-api-client'
+import { accountAccessHref } from '../account-access/return-target'
 
 /** Location state the sign-in page reads to explain why it is shown. */
 export interface SignInLocationState {

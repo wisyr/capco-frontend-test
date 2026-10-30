@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { valuesFromAnswers } from './-application-steps'
-import { hasStepErrors, validateStep } from './-step-validation'
+import { valuesFromAnswers } from './application-steps'
+import { hasStepErrors, validateStep } from './step-validation'
 
 const today = new Date(2026, 9, 30)
 const noDocument = { present: false, file: null }

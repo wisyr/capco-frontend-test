@@ -3,9 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
-import { PendingStatus } from '../-pending-status'
-import { accountAccessHref } from '../-return-target'
-import { useFieldErrors } from '../-use-field-errors'
 import {
   applicationFormQuery,
   applicationSteps,
@@ -18,27 +15,27 @@ import {
 } from '../../api/applicant-applications'
 import { ApiError } from '../../api/json-api-client'
 import { requestFailureMessage } from '../../api/request-failure-message'
-import styles from '../application-step.module.css'
+import { PendingStatus } from '../../shared/pending-status'
+import { useFieldErrors } from '../../shared/use-field-errors'
+import { accountAccessHref } from '../account-access/return-target'
+import { isSessionExpired } from '../applicant-journey/session'
+import { useUnsavedChangesGuard } from '../applicant-journey/unsaved-changes'
 
+import styles from './application-step.module.css'
 import {
   answersForStep,
   stepFields,
   stepTitles,
   valuesFromAnswers,
   type TextAnswerField,
-} from './-application-steps'
-import {
-  acceptedDocumentTypes,
-  DocumentUploadError,
-} from './-document-evidence'
-import { isSessionExpired } from './-session'
+} from './application-steps'
+import { acceptedDocumentTypes, DocumentUploadError } from './document-evidence'
 import {
   hasStepErrors,
   validateStep,
   type StepCompleteness,
   type StepField,
-} from './-step-validation'
-import { useUnsavedChangesGuard } from './-unsaved-changes'
+} from './step-validation'
 
 export interface StepFormProps {
   applicationId: string

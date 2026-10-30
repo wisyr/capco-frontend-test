@@ -1,24 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
 import { data } from 'react-router'
 
-import { stepTitles } from '../-application-steps'
-import {
-  ApplicationNotFoundPage,
-  LoadFailedPage,
-  LoadingPage,
-} from '../-page-status'
-import { ReviewPage } from '../-review-page'
-import { isSessionExpired, SessionExpiredRedirect } from '../-session'
-import { StepForm } from '../-step-form'
 import {
   applicationFormQuery,
   applicationSteps,
   type ApplicationStep,
-} from '../../../api/applicant-applications'
-import { ApiError } from '../../../api/json-api-client'
-import { requestFailureMessage } from '../../../api/request-failure-message'
+} from '../../api/applicant-applications'
+import { ApiError } from '../../api/json-api-client'
+import { requestFailureMessage } from '../../api/request-failure-message'
+import {
+  ApplicationNotFoundPage,
+  LoadFailedPage,
+  LoadingPage,
+} from '../../features/applicant-journey/page-status'
+import {
+  isSessionExpired,
+  SessionExpiredRedirect,
+} from '../../features/applicant-journey/session'
+import { stepTitles } from '../../features/application-form/application-steps'
+import { ReviewPage } from '../../features/application-form/review-page'
+import { StepForm } from '../../features/application-form/step-form'
 
-import type { Route } from './+types/$step'
+import type { Route } from './+types/step'
 
 function isApplicationStep(step: string): step is ApplicationStep {
   return (applicationSteps as readonly string[]).includes(step)

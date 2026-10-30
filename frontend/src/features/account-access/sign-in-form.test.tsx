@@ -5,9 +5,9 @@ import { axe, toHaveNoViolations } from 'jest-axe'
 import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 
-import { server } from '../test/server'
+import { server } from '../../test/server'
 
-import { SignInForm } from './-sign-in-form'
+import { SignInForm } from './sign-in-form'
 
 expect.extend(toHaveNoViolations)
 

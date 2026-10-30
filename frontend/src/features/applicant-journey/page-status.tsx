@@ -8,7 +8,7 @@ import {
   Typography,
 } from '@kyc/ui'
 
-import styles from '../applicant-journey.module.css'
+import styles from './applicant-journey.module.css'
 
 /** Placeholder page shown while journey data loads. */
 export function LoadingPage({

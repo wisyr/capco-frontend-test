@@ -3,12 +3,12 @@ import { screen } from '@testing-library/react'
 import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
-import { currentApplicationQuery } from '../api/applicant-applications'
-import { LocationProbe, renderRoutes } from '../test/render-routes'
-import { server } from '../test/server'
+import { currentApplicationQuery } from '../../api/applicant-applications'
+import styles from '../../features/applicant-journey/applicant-header.module.css'
+import { LocationProbe, renderRoutes } from '../../test/render-routes'
+import { server } from '../../test/server'
 
-import styles from './applicant-header.module.css'
-import ApplicationsLayout from './applications'
+import ApplicationsLayout from './layout'
 
 const SESSION_URL = '/api/v1/applicant-sessions/current'
 const CURRENT_URL = '/api/v1/applicant-applications/current'

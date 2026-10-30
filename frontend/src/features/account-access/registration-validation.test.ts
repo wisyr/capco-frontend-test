@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   validateRegistration,
   type RegistrationValues,
-} from './-registration-validation'
+} from './registration-validation'
 
 const valid: RegistrationValues = {
   email: '  ada@example.com ',

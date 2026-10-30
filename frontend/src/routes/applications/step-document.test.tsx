@@ -11,7 +11,7 @@ import {
   formDocument,
   renderStep,
   savedAnswers,
-} from './-step-test-utils'
+} from './step-test-utils'
 
 expect.extend(toHaveNoViolations)
 

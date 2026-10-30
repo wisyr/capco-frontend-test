@@ -2,16 +2,16 @@ import { Alert, Button, Link, Stack, TextField, Typography } from '@kyc/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
 
-import { createApplicantSession } from '../api/applicant-sessions'
-import { ApiError, UnexpectedResponseError } from '../api/json-api-client'
-import { requestFailureMessage } from '../api/request-failure-message'
+import { createApplicantSession } from '../../api/applicant-sessions'
+import { ApiError, UnexpectedResponseError } from '../../api/json-api-client'
+import { requestFailureMessage } from '../../api/request-failure-message'
+import { PendingStatus } from '../../shared/pending-status'
+import { useFieldErrors, type FieldErrors } from '../../shared/use-field-errors'
 
-import { AccountAccessCard } from './-account-access-card'
-import { credentialFieldErrors } from './-credential-field-errors'
-import { PendingStatus } from './-pending-status'
-import { accountAccessHref, isSafeJourneyPath } from './-return-target'
-import { useFieldErrors, type FieldErrors } from './-use-field-errors'
+import { AccountAccessCard } from './account-access-card'
 import styles from './account-access.module.css'
+import { credentialFieldErrors } from './credential-field-errors'
+import { accountAccessHref, isSafeJourneyPath } from './return-target'
 
 export interface SignInFormProps {
   returnTo?: string

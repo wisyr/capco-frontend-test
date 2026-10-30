@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest'
 
 import { LocationProbe, renderRoutes } from '../../test/render-routes'
 import { server } from '../../test/server'
-import ApplicationsLayout from '../applications'
 
-import ApplicationStepPage, { parseStepParam } from './$applicationId/$step'
-import { APPLICATION_ID, FORM_URL, formDocument } from './-step-test-utils'
+import ApplicationsLayout from './layout'
+import ApplicationStepPage, { parseStepParam } from './step'
+import { APPLICATION_ID, FORM_URL, formDocument } from './step-test-utils'
 
 expect.extend(toHaveNoViolations)
 

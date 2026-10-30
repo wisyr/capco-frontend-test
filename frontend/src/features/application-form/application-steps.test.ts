@@ -4,7 +4,7 @@ import {
   answersForStep,
   stepFields,
   valuesFromAnswers,
-} from './-application-steps'
+} from './application-steps'
 
 describe('valuesFromAnswers', () => {
   it('fills saved answers and leaves missing or null answers empty', () => {
