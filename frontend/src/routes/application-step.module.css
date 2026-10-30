@@ -38,7 +38,8 @@
   margin-top: 12px;
 }
 
-.documentField {
+.documentField,
+.checkboxField {
   display: flex;
   flex-direction: column;
   gap: 6px;

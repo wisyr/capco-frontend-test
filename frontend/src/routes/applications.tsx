@@ -1,7 +1,7 @@
-import { Alert, Button, ConfirmDialog, Typography } from '@kyc/ui'
+import { Alert, Button, ConfirmDialog, Link, Typography } from '@kyc/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Outlet, useBlocker, useNavigate } from 'react-router'
+import { Outlet, useBlocker, useLocation, useNavigate } from 'react-router'
 
 import { deleteApplicantSession } from '../api/applicant-sessions'
 import { requestFailureMessage } from '../api/request-failure-message'
@@ -10,8 +10,12 @@ import styles from './applicant-header.module.css'
 import { isSessionExpired } from './applications/-session'
 import { UnsavedChangesContext } from './applications/-unsaved-changes'
 
+/** Where the header title leads: the start or resume page of the journey. */
+const journeyHref = '/applications/current'
+
 export default function ApplicationsLayout() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const queryClient = useQueryClient()
   const signedOut = useRef(false)
   // A ref, not state: a step clears it right before navigating after a save,
@@ -55,9 +59,19 @@ export default function ApplicationsLayout() {
   return (
     <>
       <header className={styles.header}>
-        <Typography component="span" variant="subheading">
-          KYC Application
-        </Typography>
+        <Link
+          aria-current={pathname === journeyHref ? 'page' : undefined}
+          className={styles.homeLink}
+          href={journeyHref}
+        >
+          <Typography
+            className={styles.title}
+            component="span"
+            variant="subheading"
+          >
+            KYC Application
+          </Typography>
+        </Link>
         <Button
           className={styles.signOut}
           isPending={signOut.isPending}

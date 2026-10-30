@@ -106,7 +106,8 @@ describe('ApplicationStepPage saving', () => {
     serveForm()
     const { user } = renderStep('personal-details')
 
-    await user.click(await screen.findByRole('button', { name: 'Save' }))
+    await user.type(await nameField(), ' King')
+    await user.click(saveButton())
     expect(
       await screen.findByText('Your answers have been saved.'),
     ).toBeVisible()
@@ -119,7 +120,8 @@ describe('ApplicationStepPage saving', () => {
     const patches = serveForm()
     const { user } = renderStep('personal-details')
 
-    await user.click(await screen.findByRole('button', { name: 'Save' }))
+    await user.type(await nameField(), ' King')
+    await user.click(saveButton())
     await screen.findByText('Your answers have been saved.')
     await user.type(await nameField(), '!')
     await user.click(saveButton())
@@ -278,7 +280,8 @@ describe('ApplicationStepPage saving', () => {
     })
     const { user } = renderStep('personal-details')
 
-    await user.click(await screen.findByRole('button', { name: 'Save' }))
+    await user.type(await nameField(), ' King')
+    await user.click(saveButton())
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'We could not save these answers. The submitted form could not be accepted. Check your answers and try again.',

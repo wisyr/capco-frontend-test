@@ -41,10 +41,6 @@ export function useFieldErrors<Field extends string>(
     })
   }
 
-  function clearFieldError(field: Field) {
-    setFieldErrors((current) => ({ ...current, [field]: undefined }))
-  }
-
   function clearFieldErrors() {
     setFieldErrors({})
   }
@@ -53,7 +49,6 @@ export function useFieldErrors<Field extends string>(
     fieldErrors,
     showFieldErrors,
     revalidateFieldErrors,
-    clearFieldError,
     clearFieldErrors,
   }
 }

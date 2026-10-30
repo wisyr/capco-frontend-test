@@ -44,6 +44,11 @@ The work follows the existing layout: route modules handle behaviour, presentati
 - **Credentials are not kept.** The password is cleared after a failed sign-in, and the mutation cache is cleared on success.
 - **Document upload runs after the answers are saved.** If the upload fails, the message says the answers were saved but the document was not, and saving again retries with the new version.
 - **Date fields stay text inputs.** `type="date"` would show an empty field for any saved value that isn't an ISO date, and the API accepts any string. A format hint meets WCAG 3.3.2 without that risk.
+- **Step validation (optional in TICKET-003, added).** Errors appear beside each field, focus moves to the first one, and nothing is sent to the API until the step is valid. An error clears as soon as its field is fixed.
+  - **Continue / Save and review** needs a complete step: every answer, the consent and the document.
+  - **Save** accepts a half-finished step, which is the point of save and resume. Anything filled in must still be valid, though, so an invalid email can't be saved. With no changes it says so instead of calling the API.
+  - **Formats:** email as `name@example.com`, and dates as real `YYYY-MM-DD` dates. Date of birth must be in the past and expiry today or later. Phone and the other text answers only need to be filled in.
+  - The design-system `Form` uses React Aria's `validationBehavior="aria"`, which turns off the browser's own required-field check. Validation therefore runs in code, as it does on registration and sign-in.
 - **The unsaved-changes guard lives in the journey layout.** The step reports whether its answers differ from what the API last confirmed. The layout asks before in-app navigation (`useBlocker`) and before ending the session on Sign out. Closing the tab gets the browser's own prompt.
 
 ## Accessibility (WCAG 2.2 AA)
@@ -99,7 +104,12 @@ npm run test:e2e -w frontend     # Playwright against the real backend
 
 ## Known limitations and out of scope
 
-- **Review and submit.** The review page is still the original prototype and submission is not implemented. Both are out of scope for TICKET-003.
-- **Field validation.** Ticket 003 marks it as optional. Continue relies on the browser's required-field check, while Save accepts a partial draft on purpose.
+- **Review and submit.** Final submission is out of scope for TICKET-003, so the review page is still the prototype. It requires the confirmation checkbox, but Submit only opens the receipt page: nothing is sent to the API (`PATCH /api/v1/applicant-applications/{applicationId}`), and the receipt is not real.
+- **Plain text inputs for dates, countries and document type.** A real form would use a date picker and searchable lists. They stay as text inputs because nothing defines the values to store: the README and tickets don't mention input types, the API types every answer as a free `string` with no `format` or `enum`, and TICKET-003 rules out changing form fields. Lists in the frontend alone would invent codes the backend and reviewers don't know, and drafts already saved as free text might not match any option, which would break "populate every saved answer". The recommended approach, together with a contract update:
+  - **Date of birth and expiry:** a design-system `DatePicker` built on React Aria, storing ISO `YYYY-MM-DD` (`format: date` in the contract). The current validation already enforces this format.
+  - **Country, nationality, document country and residential country:** a searchable design-system `ComboBox` storing ISO 3166-1 alpha-2 codes, with names shown in the user's language through `Intl.DisplayNames`. The design system's `SelectField` would be hard to use with about 250 options.
+  - **Document type:** a `SelectField` with fixed options, such as Passport, National ID card and Driving licence, defined as an `enum` in the contract.
+  - **Phone:** already `type="tel"`. It could be checked against an international format such as E.164.
+- **Show/hide password toggle.** Recommended by NIST SP 800-63B and the GOV.UK Design System, because it helps people catch typos, especially on mobile. Left out because no ticket asks for it. It would be a shared design-system `PasswordField`: hidden by default, hidden again on submit, and announcing its state to screen readers.
 - **Reviewer area.** Unchanged, apart from fixing a lint error that made `npm run quality` fail.
 - **Formatting.** `frontend/tsconfig.json` was already failing the Prettier check on `main` and was left as it was.
