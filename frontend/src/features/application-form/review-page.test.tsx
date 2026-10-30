@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest'
 
 import { LocationProbe, renderRoutes } from '../../test/render-routes'
 
-import { ReviewPage } from './-review-page'
-import { APPLICATION_ID } from './-step-test-utils'
+import { ReviewPage } from './review-page'
 
 expect.extend(toHaveNoViolations)
+
+const APPLICATION_ID = '446971cf-e530-4ab7-9d24-74404a053de0'
 
 function renderReview() {
   return renderRoutes(

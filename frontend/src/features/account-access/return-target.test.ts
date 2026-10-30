@@ -4,7 +4,7 @@ import {
   accountAccessHref,
   isSafeJourneyPath,
   parseAccountAccessSearch,
-} from './-return-target'
+} from './return-target'
 
 describe('isSafeJourneyPath', () => {
   it.each([

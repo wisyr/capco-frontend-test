@@ -1,5 +1,5 @@
-import { CreateAccountForm } from './-create-account-form'
-import { parseAccountAccessSearch } from './-return-target'
+import { CreateAccountForm } from '../features/account-access/create-account-form'
+import { parseAccountAccessSearch } from '../features/account-access/return-target'
 
 import type { Route } from './+types/create-account'
 

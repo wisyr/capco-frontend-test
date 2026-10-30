@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 
-import { isSafeJourneyPath } from '../-return-target'
 import {
   currentApplicationQuery,
   startApplication,
@@ -9,13 +8,19 @@ import {
 } from '../../api/applicant-applications'
 import { UnexpectedResponseError } from '../../api/json-api-client'
 import { requestFailureMessage } from '../../api/request-failure-message'
-
+import { isSafeJourneyPath } from '../../features/account-access/return-target'
 import {
   ApplicantJourneyPresentation,
   type ApplicantJourneyProgressItem,
-} from './-applicant-journey-presentation'
-import { LoadFailedPage, LoadingPage } from './-page-status'
-import { isSessionExpired, SessionExpiredRedirect } from './-session'
+} from '../../features/applicant-journey/applicant-journey-presentation'
+import {
+  LoadFailedPage,
+  LoadingPage,
+} from '../../features/applicant-journey/page-status'
+import {
+  isSessionExpired,
+  SessionExpiredRedirect,
+} from '../../features/applicant-journey/session'
 
 const pageTitle = 'Your KYC application'
 

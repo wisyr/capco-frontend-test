@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { emailAddressPattern } from './-email-address'
+import { emailAddressPattern } from '../../shared/email-address'
 
 export interface RegistrationValues {
   email: string

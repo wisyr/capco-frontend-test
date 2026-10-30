@@ -8,7 +8,7 @@ import {
   Typography,
 } from '@kyc/ui'
 
-import styles from '../applicant-journey.module.css'
+import styles from './applicant-journey.module.css'
 
 export type ApplicantJourneyStep = 'personal-details' | 'identity-and-address'
 export type ApplicantJourneyStepState = 'complete' | 'current' | 'remaining'

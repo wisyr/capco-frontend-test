@@ -10,7 +10,7 @@ import {
   FORM_URL,
   formDocument,
   renderStep,
-} from './-step-test-utils'
+} from './step-test-utils'
 
 expect.extend(toHaveNoViolations)
 

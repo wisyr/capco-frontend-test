@@ -1,11 +1,11 @@
-import { emailAddressPattern } from '../-email-address'
+import { emailAddressPattern } from '../../shared/email-address'
 
 import {
   stepFields,
   type AnswerValues,
   type TextAnswerField,
-} from './-application-steps'
-import { documentFileError } from './-document-evidence'
+} from './application-steps'
+import { documentFileError } from './document-evidence'
 
 import type { ApplicationStep } from '../../api/applicant-applications'
 

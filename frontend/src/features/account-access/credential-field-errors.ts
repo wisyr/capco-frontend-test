@@ -1,4 +1,4 @@
-import { ApiError } from '../api/json-api-client'
+import { ApiError } from '../../api/json-api-client'
 
 export interface CredentialFieldErrors {
   email?: string

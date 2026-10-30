@@ -2,22 +2,22 @@ import { Alert, Button, Link, Stack, TextField, Typography } from '@kyc/ui'
 import { useMutation } from '@tanstack/react-query'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 
-import { createApplicantAccount } from '../api/applicant-accounts'
-import { ApiError } from '../api/json-api-client'
-import { requestFailureMessage } from '../api/request-failure-message'
+import { createApplicantAccount } from '../../api/applicant-accounts'
+import { ApiError } from '../../api/json-api-client'
+import { requestFailureMessage } from '../../api/request-failure-message'
+import { PendingStatus } from '../../shared/pending-status'
+import { useFieldErrors } from '../../shared/use-field-errors'
 
-import { AccountAccessCard } from './-account-access-card'
-import { credentialFieldErrors } from './-credential-field-errors'
-import { PendingStatus } from './-pending-status'
+import { AccountAccessCard } from './account-access-card'
+import styles from './account-access.module.css'
+import { credentialFieldErrors } from './credential-field-errors'
 import {
   passwordPolicy,
   validateRegistration,
   type RegistrationField,
   type RegistrationValues,
-} from './-registration-validation'
-import { accountAccessHref } from './-return-target'
-import { useFieldErrors } from './-use-field-errors'
-import styles from './account-access.module.css'
+} from './registration-validation'
+import { accountAccessHref } from './return-target'
 
 export interface CreateAccountFormProps {
   returnTo?: string

@@ -1,6 +1,6 @@
 import { LocationProbe, renderRoutes } from '../../test/render-routes'
 
-import ApplicationStepPage, { parseStepParam } from './$applicationId/$step'
+import ApplicationStepPage, { parseStepParam } from './step'
 
 export const APPLICATION_ID = '446971cf-e530-4ab7-9d24-74404a053de0'
 export const FORM_URL = `/api/v1/applicant-applications/${APPLICATION_ID}/form`

@@ -3,12 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useBlocker, useLocation, useNavigate } from 'react-router'
 
-import { deleteApplicantSession } from '../api/applicant-sessions'
-import { requestFailureMessage } from '../api/request-failure-message'
-
-import styles from './applicant-header.module.css'
-import { isSessionExpired } from './applications/-session'
-import { UnsavedChangesContext } from './applications/-unsaved-changes'
+import { deleteApplicantSession } from '../../api/applicant-sessions'
+import { requestFailureMessage } from '../../api/request-failure-message'
+import styles from '../../features/applicant-journey/applicant-header.module.css'
+import { isSessionExpired } from '../../features/applicant-journey/session'
+import { UnsavedChangesContext } from '../../features/applicant-journey/unsaved-changes'
 
 /** Where the header title leads: the start or resume page of the journey. */
 const journeyHref = '/applications/current'

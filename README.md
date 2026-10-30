@@ -1,5 +1,7 @@
 # KYC Application — Technical Test
 
+> **Submission notes:** what was delivered for the tickets, the key decisions, accessibility, verification and known limitations are in [`NOTES.md`](NOTES.md).
+
 This repository is a technical test for frontend development. It provides a small, realistic product context and a running API so a developer can demonstrate how they build user-facing workflows against an existing contract.
 
 ## Technical test scope

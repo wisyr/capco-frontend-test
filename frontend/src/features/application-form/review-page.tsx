@@ -2,8 +2,9 @@ import { Button, Card, CardContent, Stack, Typography } from '@kyc/ui'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
-import { useFieldErrors } from '../-use-field-errors'
-import styles from '../application-step.module.css'
+import { useFieldErrors } from '../../shared/use-field-errors'
+
+import styles from './application-step.module.css'
 
 const confirmationId = 'review-confirmation'
 const confirmationErrorId = `${confirmationId}-error`
