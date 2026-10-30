@@ -15,7 +15,12 @@ function renderReview() {
     [
       {
         path: '/applications/:applicationId/review',
-        Component: () => <ReviewPage applicationId={APPLICATION_ID} />,
+        Component: () => (
+          <ReviewPage
+            applicationId={APPLICATION_ID}
+            review={{ ready: true, missingRequiredFields: [] }}
+          />
+        ),
       },
       {
         path: '/applications/:applicationId/submitted',

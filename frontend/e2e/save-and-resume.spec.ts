@@ -72,6 +72,69 @@ test('saved answers survive signing out and back in', async ({ page }) => {
   ).toBeChecked()
 })
 
+test('the review lists missing answers and offers Submit only when complete', async ({
+  page,
+}) => {
+  await startNewApplication(page)
+  await field(page, 'Name').fill('Ada Lovelace')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByText('Your answers have been saved.')).toBeVisible()
+
+  await page.goto(page.url().replace(/personal-details$/, 'review'))
+  await expect(
+    page.getByText('Your application is not ready to submit yet.', {
+      exact: false,
+    }),
+  ).toBeVisible()
+  const personal = page.getByRole('region', { name: 'Personal details' })
+  await expect(personal.getByRole('listitem')).toContainText([
+    'Date of birth',
+    'Country',
+    'Nationality',
+    'Email',
+    'Phone',
+    'Confirmation that these details are yours',
+  ])
+  await expect(
+    page
+      .getByRole('region', { name: 'Identity and address' })
+      .getByRole('listitem')
+      .last(),
+  ).toHaveText('Document evidence')
+  await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0)
+
+  await personal
+    .getByRole('link', { name: 'Complete personal details' })
+    .click()
+  await field(page, 'Date of birth').fill('1815-12-10')
+  await field(page, 'Country').fill('United Kingdom')
+  await field(page, 'Nationality').fill('British')
+  await field(page, 'Email').fill('ada@example.com')
+  await field(page, 'Phone').fill('+44 20 7946 0000')
+  await page.getByRole('checkbox', { name: /I confirm these details/ }).check()
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  await field(page, 'Document type').fill('Passport')
+  await field(page, 'Document number').fill('123456789')
+  await field(page, 'Document country').fill('United Kingdom')
+  await field(page, 'Expiry').fill('2099-01-01')
+  await field(page, 'Street').fill('12 St James Square')
+  await field(page, 'City').fill('London')
+  await field(page, 'Postal code').fill('SW1Y 4JH')
+  await field(page, 'Residential country').fill('United Kingdom')
+  await page
+    .getByLabel('Document evidence (required)')
+    .setInputFiles(passportImage)
+  await page.getByRole('button', { name: 'Save and review' }).click()
+
+  await expect(page.getByText(/All required answers are saved/)).toBeVisible()
+  await page
+    .getByRole('checkbox', { name: /I confirm the information/ })
+    .check()
+  await page.getByRole('button', { name: 'Submit' }).click()
+  await expect(page).toHaveURL(/\/submitted$/)
+})
+
 test('an expired session keeps the entered answers and explains what to do', async ({
   page,
 }) => {

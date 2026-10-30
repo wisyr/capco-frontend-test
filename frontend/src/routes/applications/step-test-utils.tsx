@@ -4,6 +4,7 @@ import ApplicationStepPage, { parseStepParam } from './step'
 
 export const APPLICATION_ID = '446971cf-e530-4ab7-9d24-74404a053de0'
 export const FORM_URL = `/api/v1/applicant-applications/${APPLICATION_ID}/form`
+export const REVIEW_URL = `/api/v1/applicant-applications/${APPLICATION_ID}/review`
 
 export const savedAnswers = {
   name: 'Ada Lovelace',
@@ -41,6 +42,21 @@ export function formDocument(
         answers,
         documentEvidence: { present: documentPresent },
         version,
+      },
+    },
+  }
+}
+
+export function reviewDocument(
+  missingRequiredFields: { step: string; field: string }[] = [],
+) {
+  return {
+    data: {
+      type: 'applicant-application-reviews',
+      id: APPLICATION_ID,
+      attributes: {
+        ready: missingRequiredFields.length === 0,
+        missingRequiredFields,
       },
     },
   }

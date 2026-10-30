@@ -166,6 +166,35 @@ export async function uploadDocumentEvidence(
   return document.data.attributes
 }
 
+const reviewDocumentSchema = z.object({
+  data: z.object({
+    type: z.literal('applicant-application-reviews'),
+    id: z.string(),
+    attributes: z.object({
+      ready: z.boolean(),
+      missingRequiredFields: z.array(
+        z.object({ step: stepSchema, field: z.string() }),
+      ),
+    }),
+  }),
+})
+
+/** Whether the draft can be submitted, and which answers are still missing. */
+export type ApplicationReview = z.infer<
+  typeof reviewDocumentSchema
+>['data']['attributes']
+
+/** Asks the API whether the draft is complete. Nothing is submitted. */
+export async function getApplicationReview(
+  applicationId: string,
+): Promise<ApplicationReview> {
+  const document = await jsonApiRequest(
+    `/applicant-applications/${encodeURIComponent(applicationId)}/review`,
+    { schema: reviewDocumentSchema },
+  )
+  return document.data.attributes
+}
+
 export const currentApplicationQuery = queryOptions({
   queryKey: ['applicant-applications', 'current'],
   queryFn: getCurrentApplication,
@@ -175,6 +204,13 @@ export function applicationFormQuery(applicationId: string) {
   return queryOptions({
     queryKey: ['applicant-applications', applicationId, 'form'],
     queryFn: () => getApplicationForm(applicationId),
+  })
+}
+
+export function applicationReviewQuery(applicationId: string) {
+  return queryOptions({
+    queryKey: ['applicant-applications', applicationId, 'review'],
+    queryFn: () => getApplicationReview(applicationId),
   })
 }
 

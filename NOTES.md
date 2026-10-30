@@ -17,6 +17,10 @@ Beyond the tickets:
 - **Unsaved-changes guard.** Leaving a step or signing out with unsaved answers asks first.
 - **Date format hints.** The date fields now say which format to use.
 - **ConfirmDialog.** A new design-system component, used by the unsaved-changes guard.
+- **Review readiness.** The review page asks the API whether the draft is complete (`GET /api/v1/applicant-applications/{applicationId}/review`). Before, it always said "ready for review", even for an empty draft. Save accepts a half-finished step, so an applicant could reach review with answers still missing. Now:
+  - Missing answers are listed under their step, with a link to that step.
+  - Submit and the confirmation appear only once the API reports the draft as ready.
+  - Every save drops the cached result, so the page never shows readiness from before the latest save.
 
 ## Architecture
 
@@ -60,23 +64,23 @@ The work follows the existing layout: route modules handle behaviour, presentati
 - Every input has a visible label marked "(required)". Fields carry `autocomplete` purposes (1.3.5). Hints and errors are linked with `aria-describedby`.
 - On a failed submit, errors appear next to their fields and focus moves to the first invalid one. Form-level problems use an alert.
 - Pending and success messages are announced through `role="status"` regions that stay mounted, so screen readers pick up changes. This works whether the form was submitted with a click or with Enter.
-- Each page sets a descriptive `<title>`, and each step's title includes its position, such as "Step 1 of 2".
+- Each page sets a descriptive `<title>`, including the error and not-found page, and each step's title includes its position, such as "Step 1 of 2".
 - `ConfirmDialog` is an alert dialog named by its heading. It traps focus, starts on the safe action, closes with Escape, and returns focus when it closes.
 - The Sign out button on the blue header uses a high-contrast style with a visible focus outline.
-- jest-axe runs in the component tests, but jsdom cannot check colour contrast. A Playwright scan with `@axe-core/playwright` (`frontend/e2e/accessibility.spec.ts`) therefore checks the real pages in Chromium against WCAG 2.2 A and AA, contrast included. It covers sign-in, registration, the journey page, both steps, the review page, their error states and the leave dialog. React Aria's hidden live region is excluded, because a pending button's announcement there is left unnamed once the button is gone. Layouts were checked at 375px wide.
+- jest-axe runs in the component tests, but jsdom cannot check colour contrast. A Playwright scan with `@axe-core/playwright` (`frontend/e2e/accessibility.spec.ts`) therefore checks the real pages in Chromium against WCAG 2.2 A and AA, contrast included. It covers sign-in, registration, the journey page, both steps, the review page with missing answers, their error states and the leave dialog. React Aria's hidden live region is excluded, because a pending button's announcement there is left unnamed once the button is gone. Every page was checked at 320px wide, the width WCAG 1.4.10 (Reflow) uses, with no sideways scrolling.
 
 ## Verification
 
 From the repository root:
 
 ```sh
-npm run quality                  # lint, typecheck, dependency rules, DS tests, DS build
+npm run quality                  # lint, typecheck, dependency rules, tests and builds for DS and frontend
 npm run format:check             # Prettier, including JSON, CSS and Markdown
-npm run typecheck -w frontend
-npm test -w frontend             # unit and component tests (Vitest, MSW, jest-axe)
 npx playwright install chromium  # once
 npm run test:e2e -w frontend     # Playwright against the real backend
 ```
+
+- **Root scripts cover both workspaces.** In the starter, `npm test`, `npm run typecheck` and `npm run build` from the root only ran the design system, so following the README skipped every frontend test. They now run the design system and then the frontend, and `npm run quality` includes both. Frontend tests use Vitest, MSW and jest-axe.
 
 - **Component tests** render routes through React Router's `createRoutesStub` and use MSW to answer requests in the shapes defined by the OpenAPI contract.
 - **Regression tests** for bugs found in review were each checked to fail without their fix.
@@ -87,6 +91,7 @@ npm run test:e2e -w frontend     # Playwright against the real backend
   - the expired-session message
   - the unsaved-changes guard
   - step validation, and the header link back to the journey
+  - the review page listing missing answers, then allowing Submit once the draft is complete
 
 ### Continuous integration
 
@@ -120,7 +125,7 @@ A newer push to the same branch cancels the older run, and the workflow only has
 
 ## Known limitations and out of scope
 
-- **Review and submit.** Final submission is out of scope for TICKET-003, so the review page is still the prototype. It requires the confirmation checkbox, but Submit only opens the receipt page: nothing is sent to the API (`PATCH /api/v1/applicant-applications/{applicationId}`), and the receipt is not real.
+- **Submission.** Final submission is out of scope for TICKET-003. The review page checks readiness with the API and requires the confirmation, but Submit only opens the receipt page: nothing is sent to the API (`PATCH /api/v1/applicant-applications/{applicationId}`), and the receipt is not real.
 - **Plain text inputs for dates, countries and document type.** A real form would use a date picker and searchable lists. They stay as text inputs because nothing defines the values to store: the README and tickets don't mention input types, the API types every answer as a free `string` with no `format` or `enum`, and TICKET-003 rules out changing form fields. Lists in the frontend alone would invent codes the backend and reviewers don't know, and drafts already saved as free text might not match any option, which would break "populate every saved answer". The recommended approach, together with a contract update:
   - **Date of birth and expiry:** a design-system `DatePicker` built on React Aria, storing ISO `YYYY-MM-DD` (`format: date` in the contract). The current validation already enforces this format.
   - **Country, nationality, document country and residential country:** a searchable design-system `ComboBox` storing ISO 3166-1 alpha-2 codes, with names shown in the user's language through `Intl.DisplayNames`. The design system's `SelectField` would be hard to use with about 250 options.
@@ -128,4 +133,3 @@ A newer push to the same branch cancels the older run, and the workflow only has
   - **Phone:** already `type="tel"`. It could be checked against an international format such as E.164.
 - **Show/hide password toggle.** Recommended by NIST SP 800-63B and the GOV.UK Design System, because it helps people catch typos, especially on mobile. Left out because no ticket asks for it. It would be a shared design-system `PasswordField`: hidden by default, hidden again on submit, and announcing its state to screen readers.
 - **Reviewer area.** Unchanged, apart from fixing a lint error that made `npm run quality` fail.
-- **Formatting.** `frontend/tsconfig.json` was already failing the Prettier check on `main` and was left as it was.

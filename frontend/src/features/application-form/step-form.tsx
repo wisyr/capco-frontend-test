@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router'
 
 import {
   applicationFormQuery,
+  applicationReviewQuery,
   applicationSteps,
   currentApplicationQuery,
   saveApplicationForm,
@@ -116,6 +117,11 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
     queryClient.setQueryData(formQuery.queryKey, saved)
     void queryClient.invalidateQueries({
       queryKey: currentApplicationQuery.queryKey,
+    })
+    // Dropped rather than refetched, so the review page never shows
+    // readiness from before this save while it checks again.
+    queryClient.removeQueries({
+      queryKey: applicationReviewQuery(applicationId).queryKey,
     })
     setVersion(saved.version)
     setDocumentPresent(saved.documentEvidencePresent)

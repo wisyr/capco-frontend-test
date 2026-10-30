@@ -113,6 +113,24 @@ export const stepTitles: Record<ApplicationStep, string> = {
   'identity-and-address': 'Identity and address',
 }
 
+/** Answers stored outside the text fields, named as the API names them. */
+const otherFieldLabels: Record<string, string> = {
+  consentConfirmed: 'Confirmation that these details are yours',
+  documentEvidence: 'Document evidence',
+}
+
+/**
+ * How the review page names a missing answer reported by the API. An unknown
+ * field keeps its API name, so the applicant still sees that it is missing.
+ */
+export function fieldLabel(step: ApplicationStep, field: string): string {
+  return (
+    stepFields[step].find(({ name }) => name === field)?.label ??
+    otherFieldLabels[field] ??
+    field
+  )
+}
+
 /** Editable form state for every answer, with unanswered fields empty. */
 export interface AnswerValues {
   text: Record<TextAnswerField, string>

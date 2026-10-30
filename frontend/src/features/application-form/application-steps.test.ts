@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   answersForStep,
+  fieldLabel,
   stepFields,
   valuesFromAnswers,
 } from './application-steps'
@@ -57,5 +58,21 @@ describe('answersForStep', () => {
     )
     expect(answers.city).toBe('London')
     expect(answers).not.toHaveProperty('consentConfirmed')
+  })
+})
+
+describe('fieldLabel', () => {
+  it('names text, consent and document fields as the form labels them', () => {
+    expect(fieldLabel('personal-details', 'dateOfBirth')).toBe('Date of birth')
+    expect(fieldLabel('personal-details', 'consentConfirmed')).toBe(
+      'Confirmation that these details are yours',
+    )
+    expect(fieldLabel('identity-and-address', 'documentEvidence')).toBe(
+      'Document evidence',
+    )
+  })
+
+  it('falls back to the API name for a field it does not know', () => {
+    expect(fieldLabel('identity-and-address', 'taxNumber')).toBe('taxNumber')
   })
 })
