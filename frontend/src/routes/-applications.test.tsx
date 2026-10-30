@@ -7,6 +7,7 @@ import { currentApplicationQuery } from '../api/applicant-applications'
 import { LocationProbe, renderRoutes } from '../test/render-routes'
 import { server } from '../test/server'
 
+import styles from './applicant-header.module.css'
 import ApplicationsLayout from './applications'
 
 const SESSION_URL = '/api/v1/applicant-sessions/current'
@@ -76,6 +77,8 @@ describe('ApplicationsLayout', () => {
       expect(await screen.findByRole('banner')).toHaveTextContent(
         'KYC Application',
       )
+      // White on the header blue; the DS default text colour fails contrast.
+      expect(screen.getByText('KYC Application')).toHaveClass(styles.title)
       expect(await screen.findByText('Journey loaded')).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
@@ -105,4 +108,36 @@ describe('ApplicationsLayout', () => {
       queryClient.getQueryData(currentApplicationQuery.queryKey),
     ).toBeNull()
   })
+
+  // Clicking it is covered end to end; these tests render without the app's
+  // React Aria RouterProvider, which turns link clicks into navigation.
+  it.each([
+    ['another journey page', '/applications/other', undefined],
+    ['the journey page itself', '/applications/current', 'page'],
+  ])(
+    'links the header title to the journey from %s',
+    async (_, path, current) => {
+      renderRoutes(
+        [
+          {
+            path: '/applications',
+            Component: ApplicationsLayout,
+            children: [
+              { path: 'current', Component: () => <main>Journey</main> },
+              { path: 'other', Component: () => <main>Other page</main> },
+            ],
+          },
+        ],
+        path,
+      )
+
+      const home = await screen.findByRole('link', { name: 'KYC Application' })
+      expect(home).toHaveAttribute('href', '/applications/current')
+      if (current) {
+        expect(home).toHaveAttribute('aria-current', current)
+      } else {
+        expect(home).not.toHaveAttribute('aria-current')
+      }
+    },
+  )
 })

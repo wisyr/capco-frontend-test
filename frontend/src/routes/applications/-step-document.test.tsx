@@ -102,7 +102,11 @@ describe('ApplicationStepPage document evidence', () => {
     const requests = serveForm()
     const { user } = renderStep('identity-and-address')
 
-    await user.click(await screen.findByRole('button', { name: 'Save' }))
+    await user.type(
+      await screen.findByLabelText('City (required)'),
+      ' Westminster',
+    )
+    await user.click(saveButton())
 
     expect(
       await screen.findByText('Your answers have been saved.'),

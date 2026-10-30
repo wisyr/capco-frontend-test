@@ -29,10 +29,15 @@ import {
 } from './-application-steps'
 import {
   acceptedDocumentTypes,
-  documentFileError,
   DocumentUploadError,
 } from './-document-evidence'
 import { isSessionExpired } from './-session'
+import {
+  hasStepErrors,
+  validateStep,
+  type StepCompleteness,
+  type StepField,
+} from './-step-validation'
 import { useUnsavedChangesGuard } from './-unsaved-changes'
 
 export interface StepFormProps {
@@ -45,7 +50,23 @@ export interface StepFormProps {
 /** Save keeps the applicant on the step; continue moves on after saving. */
 type SaveIntent = 'save' | 'continue'
 
-const documentInputId = 'document-evidence'
+type Notice = { message: string; severity: 'success' | 'info' }
+
+/**
+ * Input ids in focus order. Both steps share the list; only the open step's
+ * fields can have errors.
+ */
+const fieldIds = Object.fromEntries([
+  ...stepFields['personal-details'].map(({ name }) => [name, `answer-${name}`]),
+  ['consentConfirmed', 'answer-consentConfirmed'],
+  ...stepFields['identity-and-address'].map(({ name }) => [
+    name,
+    `answer-${name}`,
+  ]),
+  ['document', 'document-evidence'],
+]) as Record<StepField, string>
+const documentInputId = fieldIds.document
+const consentErrorId = `${fieldIds.consentConfirmed}-error`
 
 export function StepForm({ applicationId, step, form }: StepFormProps) {
   const navigate = useNavigate()
@@ -60,16 +81,22 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
   // The version these answers are based on. Background refetches must not
   // advance it, or a save could overwrite changes made somewhere else.
   const [version, setVersion] = useState(form.version)
-  const [notice, setNotice] = useState<string>()
+  const [notice, setNotice] = useState<Notice>()
   const [documentPresent, setDocumentPresent] = useState(
     form.documentEvidencePresent,
   )
   const [documentFile, setDocumentFile] = useState<File | null>(null)
   // Remounts the file input to clear it once its file is uploaded.
   const [documentInputKey, setDocumentInputKey] = useState(0)
-  const { fieldErrors, showFieldErrors, clearFieldError } = useFieldErrors({
-    document: documentInputId,
-  })
+  const {
+    fieldErrors,
+    showFieldErrors,
+    revalidateFieldErrors,
+    clearFieldErrors,
+  } = useFieldErrors(fieldIds)
+  // How the last Save or Continue checked the step, so fixing a field
+  // re-checks it by the same rules.
+  const [checkedAs, setCheckedAs] = useState<StepCompleteness>('partial')
 
   const hasUnsavedChanges =
     documentFile !== null ||
@@ -124,11 +151,12 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
         reportUnsavedChanges(false)
         void navigate(nextHref)
       } else {
-        setNotice(
-          file
+        setNotice({
+          message: file
             ? 'Your answers and document have been saved.'
             : 'Your answers have been saved.',
-        )
+          severity: 'success',
+        })
       }
     },
     onError: (error, { answers }) => {
@@ -147,7 +175,11 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
       setSavedAnswers(answersForStep(step, latestValues))
       setVersion(latest.version)
       save.reset()
-      setNotice('The latest saved answers have been loaded.')
+      clearFieldErrors()
+      setNotice({
+        message: 'The latest saved answers have been loaded.',
+        severity: 'success',
+      })
     },
   })
 
@@ -155,9 +187,24 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
     if (save.isPending || reload.isPending) {
       return
     }
-    const fileError = documentFile && documentFileError(documentFile)
-    if (fileError) {
-      showFieldErrors({ document: fileError })
+    // Continue needs a complete step. Save keeps a half-finished draft, but
+    // only with valid values.
+    const completeness = intent === 'continue' ? 'complete' : 'partial'
+    setCheckedAs(completeness)
+    const errors = validateStep(
+      step,
+      values,
+      { present: documentPresent, file: documentFile },
+      completeness,
+    )
+    if (hasStepErrors(errors)) {
+      setNotice(undefined)
+      showFieldErrors(errors)
+      return
+    }
+    clearFieldErrors()
+    if (intent === 'save' && !hasUnsavedChanges) {
+      setNotice({ message: 'There are no changes to save.', severity: 'info' })
       return
     }
     setNotice(undefined)
@@ -170,10 +217,24 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
     })
   }
 
+  /** Re-checks fields already showing an error, by the last rules used. */
+  function revalidate(nextValues: typeof values, nextFile: File | null) {
+    revalidateFieldErrors(
+      validateStep(
+        step,
+        nextValues,
+        { present: documentPresent, file: nextFile },
+        checkedAs,
+      ),
+    )
+  }
+
   function edit(update: (current: typeof values) => typeof values) {
-    setValues(update)
+    const next = update(values)
+    setValues(next)
     // Anything typed after a save is not saved yet.
     setNotice(undefined)
+    revalidate(next, documentFile)
   }
 
   function setText(name: TextAnswerField, value: string) {
@@ -212,8 +273,9 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
               ({ name, label, autoComplete, type, hint }) => (
                 <TextField
                   autoComplete={autoComplete}
-                  helperText={hint}
-                  id={`answer-${name}`}
+                  error={Boolean(fieldErrors[name])}
+                  helperText={fieldErrors[name] ?? hint}
+                  id={fieldIds[name]}
                   key={name}
                   label={`${label} (required)`}
                   name={name}
@@ -225,22 +287,40 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
               ),
             )}
             {isFirstStep ? (
-              <label>
-                <input
-                  checked={values.consentConfirmed}
-                  name="consentConfirmed"
-                  onChange={(event) => {
-                    const { checked } = event.target
-                    edit((current) => ({
-                      ...current,
-                      consentConfirmed: checked,
-                    }))
-                  }}
-                  required
-                  type="checkbox"
-                />{' '}
-                I confirm these details are accurate and belong to me.
-              </label>
+              <div className={styles.checkboxField}>
+                <label>
+                  <input
+                    aria-describedby={
+                      fieldErrors.consentConfirmed ? consentErrorId : undefined
+                    }
+                    aria-invalid={
+                      fieldErrors.consentConfirmed ? true : undefined
+                    }
+                    checked={values.consentConfirmed}
+                    id={fieldIds.consentConfirmed}
+                    name="consentConfirmed"
+                    onChange={(event) => {
+                      const { checked } = event.target
+                      edit((current) => ({
+                        ...current,
+                        consentConfirmed: checked,
+                      }))
+                    }}
+                    required
+                    type="checkbox"
+                  />{' '}
+                  I confirm these details are accurate and belong to me.
+                </label>
+                {fieldErrors.consentConfirmed ? (
+                  <Typography
+                    className={styles.fieldError}
+                    id={consentErrorId}
+                    variant="caption"
+                  >
+                    {fieldErrors.consentConfirmed}
+                  </Typography>
+                ) : null}
+              </div>
             ) : (
               <div className={styles.documentField}>
                 <label htmlFor={documentInputId}>
@@ -277,9 +357,10 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
                   key={documentInputKey}
                   name="file"
                   onChange={(event) => {
-                    setDocumentFile(event.target.files?.[0] ?? null)
-                    clearFieldError('document')
+                    const file = event.target.files?.[0] ?? null
+                    setDocumentFile(file)
                     setNotice(undefined)
+                    revalidate(values, file)
                   }}
                   required={!documentPresent}
                   type="file"
@@ -308,8 +389,8 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
             {/* Always mounted so screen readers announce new notices. */}
             <div role="status">
               {notice ? (
-                <Alert role="none" severity="success">
-                  {notice}
+                <Alert role="none" severity={notice.severity}>
+                  {notice.message}
                 </Alert>
               ) : null}
             </div>

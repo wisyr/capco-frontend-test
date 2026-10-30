@@ -51,7 +51,7 @@ describe('ApplicationStepPage loading', () => {
     expect(await field('Document type')).toHaveValue('Passport')
     expect(await field('Document number')).toHaveValue('123456789')
     expect(await field('Document country')).toHaveValue('United Kingdom')
-    expect(await field('Expiry')).toHaveValue('2030-01-01')
+    expect(await field('Expiry')).toHaveValue('2099-01-01')
     expect(await field('Street')).toHaveValue('12 St James Square')
     expect(await field('City')).toHaveValue('London')
     expect(await field('Postal code')).toHaveValue('SW1Y 4JH')

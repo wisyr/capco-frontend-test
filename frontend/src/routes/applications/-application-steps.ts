@@ -11,6 +11,8 @@ export interface TextFieldDefinition {
   type?: 'email' | 'tel'
   /** WCAG 3.3.2: states the expected format where one is needed. */
   hint?: string
+  /** Shown beside the field when it is left empty on Continue. */
+  requiredMessage: string
 }
 
 export const stepFields: Record<
@@ -18,34 +20,90 @@ export const stepFields: Record<
   readonly TextFieldDefinition[]
 > = {
   'personal-details': [
-    { name: 'name', label: 'Name', autoComplete: 'name' },
+    {
+      name: 'name',
+      label: 'Name',
+      autoComplete: 'name',
+      requiredMessage: 'Enter your name.',
+    },
     {
       name: 'dateOfBirth',
       label: 'Date of birth',
       autoComplete: 'bday',
       hint: 'Use year-month-day, for example 1990-04-23.',
+      requiredMessage: 'Enter your date of birth.',
     },
-    { name: 'country', label: 'Country', autoComplete: 'country-name' },
-    { name: 'nationality', label: 'Nationality' },
-    { name: 'email', label: 'Email', autoComplete: 'email', type: 'email' },
-    { name: 'phone', label: 'Phone', autoComplete: 'tel', type: 'tel' },
+    {
+      name: 'country',
+      label: 'Country',
+      autoComplete: 'country-name',
+      requiredMessage: 'Enter your country.',
+    },
+    {
+      name: 'nationality',
+      label: 'Nationality',
+      requiredMessage: 'Enter your nationality.',
+    },
+    {
+      name: 'email',
+      label: 'Email',
+      autoComplete: 'email',
+      type: 'email',
+      requiredMessage: 'Enter your email address.',
+    },
+    {
+      name: 'phone',
+      label: 'Phone',
+      autoComplete: 'tel',
+      type: 'tel',
+      requiredMessage: 'Enter your phone number.',
+    },
   ],
   'identity-and-address': [
-    { name: 'documentType', label: 'Document type' },
-    { name: 'documentNumber', label: 'Document number' },
-    { name: 'documentCountry', label: 'Document country' },
+    {
+      name: 'documentType',
+      label: 'Document type',
+      requiredMessage: 'Enter the document type, for example Passport.',
+    },
+    {
+      name: 'documentNumber',
+      label: 'Document number',
+      requiredMessage: 'Enter the document number.',
+    },
+    {
+      name: 'documentCountry',
+      label: 'Document country',
+      requiredMessage: 'Enter the country that issued the document.',
+    },
     {
       name: 'expiry',
       label: 'Expiry',
       hint: 'Use year-month-day, for example 2031-08-31.',
+      requiredMessage: 'Enter the expiry date.',
     },
-    { name: 'street', label: 'Street', autoComplete: 'street-address' },
-    { name: 'city', label: 'City', autoComplete: 'address-level2' },
-    { name: 'postal', label: 'Postal code', autoComplete: 'postal-code' },
+    {
+      name: 'street',
+      label: 'Street',
+      autoComplete: 'street-address',
+      requiredMessage: 'Enter your street address.',
+    },
+    {
+      name: 'city',
+      label: 'City',
+      autoComplete: 'address-level2',
+      requiredMessage: 'Enter your city.',
+    },
+    {
+      name: 'postal',
+      label: 'Postal code',
+      autoComplete: 'postal-code',
+      requiredMessage: 'Enter your postal code.',
+    },
     {
       name: 'residentialCountry',
       label: 'Residential country',
       autoComplete: 'country-name',
+      requiredMessage: 'Enter your country of residence.',
     },
   ],
 }

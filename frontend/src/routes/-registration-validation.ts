@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { emailAddressPattern } from './-email-address'
+
 export interface RegistrationValues {
   email: string
   password: string
@@ -13,13 +15,6 @@ export type RegistrationErrors = Partial<Record<RegistrationField, string>>
 /** Password policy from POST /api/v1/applicant-accounts in the API contract. */
 export const passwordPolicy =
   'Use at least 6 characters, including an uppercase letter and a special character.'
-
-/**
- * Same shape the API accepts: text, @, and a domain containing a dot, with no
- * whitespace. Stricter checks would reject addresses the API allows, such as
- * internationalized domains.
- */
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const passwordSchema = z
   .string()
@@ -38,7 +33,7 @@ const registrationSchema = z
       .trim()
       .min(1, 'Enter your email address.')
       .regex(
-        emailPattern,
+        emailAddressPattern,
         'Enter an email address in the format name@example.com.',
       ),
     password: passwordSchema,

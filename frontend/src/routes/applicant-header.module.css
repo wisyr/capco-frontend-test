@@ -9,6 +9,22 @@
   min-height: 64px;
   padding: 8px 16px;
 }
+/* DS text is dark navy (3.1:1 on this blue); white reaches 4.6:1. */
+.title.title {
+  color: #fff;
+}
+.homeLink {
+  border-radius: 4px;
+  color: #fff;
+  text-decoration: none;
+}
+.homeLink[data-hovered] {
+  text-decoration: underline;
+}
+.homeLink[data-focus-visible] {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
 /* The DS secondary button is blue on transparent, unreadable on this header. */
 .signOut.signOut {
   background: #fff;
