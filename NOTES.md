@@ -67,6 +67,7 @@ From the repository root:
 
 ```sh
 npm run quality                  # lint, typecheck, dependency rules, DS tests, DS build
+npm run format:check             # Prettier, including JSON, CSS and Markdown
 npm run typecheck -w frontend
 npm test -w frontend             # unit and component tests (Vitest, MSW, jest-axe)
 npx playwright install chromium  # once
@@ -81,6 +82,17 @@ npm run test:e2e -w frontend     # Playwright against the real backend
   - saving, signing out and resuming
   - the expired-session message
   - the unsaved-changes guard
+  - step validation, and the header link back to the journey
+
+### Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request to `main` and `develop`. It has three parallel jobs:
+
+- **Lint, format and types:** ESLint, the Prettier check, design-system dependency rules, and TypeScript for the design system and the frontend.
+- **Unit tests and build:** design-system and frontend tests, then both production builds.
+- **End-to-end tests:** sets up Node 26 and Temurin JDK 25, compiles the backend first so its cold start fits the runner's two-minute wait, and runs the Playwright suite against it. On failure, the HTML report and traces are uploaded as an artifact. Failures are also annotated on the pull request.
+
+A newer push to the same branch cancels the older run, and the workflow only has read access to the repository.
 
 ## Process
 
