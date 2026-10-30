@@ -15,7 +15,26 @@ if (!globalThis.CSS) {
 // to let uploads behave as they do in a browser.
 const NodeFormData = (await new Response(new URLSearchParams()).formData())
   .constructor as typeof FormData
-Object.assign(globalThis, { File: NodeFile, FormData: NodeFormData })
+const JsdomFormData = globalThis.FormData
+
+/**
+ * Node's FormData, which can also be built from a jsdom form, as React DOM
+ * does when a submit starts a transition, such as an immediate navigation.
+ * Only text entries are copied: a jsdom File is not a Node File.
+ */
+class TestFormData extends NodeFormData {
+  constructor(form?: HTMLFormElement, submitter?: HTMLElement | null) {
+    super()
+    if (form) {
+      for (const [name, value] of new JsdomFormData(form, submitter)) {
+        if (typeof value === 'string') {
+          this.append(name, value)
+        }
+      }
+    }
+  }
+}
+Object.assign(globalThis, { File: NodeFile, FormData: TestFormData })
 
 if (typeof CSS.escape !== 'function') {
   Object.defineProperty(CSS, 'escape', {

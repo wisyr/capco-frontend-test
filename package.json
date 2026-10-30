@@ -22,6 +22,7 @@
     "lint:fix": "eslint DS frontend --fix",
     "quality": "npm run lint && npm run typecheck && npm run check:dependencies && npm test && npm run build",
     "format": "prettier --write DS frontend package.json eslint.config.mjs prettier.config.js",
+    "format:check": "prettier --check DS frontend package.json eslint.config.mjs prettier.config.js",
     "check:dependencies": "dependency-cruiser --config .dependency-cruiser.cjs DS"
   },
   "devDependencies": {
