@@ -5,6 +5,7 @@ import { server } from '../test/server'
 
 import {
   getApplicationForm,
+  getApplicationReview,
   getCurrentApplication,
   saveApplicationForm,
   startApplication,
@@ -131,6 +132,31 @@ describe('getApplicationForm', () => {
       answers: { name: 'Ada', phone: null, consentConfirmed: true },
       documentEvidencePresent: true,
       version: 3,
+    })
+  })
+})
+
+describe('getApplicationReview', () => {
+  it('returns readiness and the missing fields by step', async () => {
+    const missingRequiredFields = [
+      { step: 'personal-details', field: 'name' },
+      { step: 'identity-and-address', field: 'documentEvidence' },
+    ]
+    server.use(
+      http.get(`/api/v1/applicant-applications/${APPLICATION_ID}/review`, () =>
+        HttpResponse.json({
+          data: {
+            type: 'applicant-application-reviews',
+            id: APPLICATION_ID,
+            attributes: { ready: false, missingRequiredFields },
+          },
+        }),
+      ),
+    )
+
+    await expect(getApplicationReview(APPLICATION_ID)).resolves.toEqual({
+      ready: false,
+      missingRequiredFields,
     })
   })
 })

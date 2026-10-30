@@ -3,6 +3,7 @@ import { data } from 'react-router'
 
 import {
   applicationFormQuery,
+  applicationReviewQuery,
   applicationSteps,
   type ApplicationStep,
 } from '../../api/applicant-applications'
@@ -45,9 +46,34 @@ export default function ApplicationStepPage({
 }: Route.ComponentProps) {
   const { step } = loaderData
   if (step === 'review') {
-    return <ReviewPage applicationId={params.applicationId} />
+    return <ReviewStep applicationId={params.applicationId} />
   }
   return <StepPage applicationId={params.applicationId} step={step} />
+}
+
+function ReviewStep({ applicationId }: { applicationId: string }) {
+  const review = useQuery(applicationReviewQuery(applicationId))
+  const title = 'Review application'
+
+  if (review.data) {
+    return <ReviewPage applicationId={applicationId} review={review.data} />
+  }
+  if (review.isError) {
+    if (isSessionExpired(review.error)) {
+      return <SessionExpiredRedirect />
+    }
+    if (review.error instanceof ApiError && review.error.status === 404) {
+      return <ApplicationNotFoundPage />
+    }
+    return (
+      <LoadFailedPage
+        title={title}
+        message={`We could not check your application. ${requestFailureMessage(review.error)}`}
+        onRetry={() => void review.refetch()}
+      />
+    )
+  }
+  return <LoadingPage title={title} message="Checking your application…" />
 }
 
 function StepPage({

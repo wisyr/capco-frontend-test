@@ -55,13 +55,19 @@ export default function App() {
 export function ErrorBoundary() {
   const error = useRouteError()
   const notFound = isRouteErrorResponse(error) && error.status === 404
+  const heading = notFound ? 'Page not found' : 'Something went wrong'
   return (
     <main>
-      <h1>{notFound ? 'Page not found' : 'Something went wrong'}</h1>
+      <title>{`${heading} | KYC`}</title>
+      <h1>{heading}</h1>
       <p>
         {notFound
           ? 'The page you requested does not exist.'
           : 'Please try again.'}
+      </p>
+      {/* A full page load, which also starts the app afresh after an error. */}
+      <p>
+        <a href="/applications/current">Go to your application</a>
       </p>
     </main>
   )

@@ -85,11 +85,11 @@ test.describe('accessibility', () => {
     await expect(field(page, 'City')).toBeVisible()
     await expectNoAccessibilityViolations(page)
 
+    // The draft is incomplete, so the review lists what is missing.
     await page.goto(stepUrl.replace(/personal-details$/, 'review'))
-    await page.getByRole('button', { name: 'Submit' }).click()
     await expect(
-      page.getByRole('checkbox', { name: /I confirm the information/ }),
-    ).toBeFocused()
+      page.getByRole('link', { name: 'Complete personal details' }),
+    ).toBeVisible()
     await expectNoAccessibilityViolations(page)
     expect(applicationUrl).toMatch(/\/applications\/current$/)
   })
