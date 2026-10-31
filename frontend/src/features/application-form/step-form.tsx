@@ -8,6 +8,7 @@ import {
   applicationReviewQuery,
   applicationSteps,
   currentApplicationQuery,
+  getApplicationForm,
   saveApplicationForm,
   uploadDocumentEvidence,
   type ApplicationForm,
@@ -30,7 +31,11 @@ import {
   valuesFromAnswers,
   type TextAnswerField,
 } from './application-steps'
-import { acceptedDocumentTypes, DocumentUploadError } from './document-evidence'
+import {
+  acceptedDocumentTypes,
+  afterUpload,
+  DocumentUploadError,
+} from './document-evidence'
 import {
   hasStepErrors,
   validateStep,
@@ -141,7 +146,12 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
       } catch (cause) {
         throw new DocumentUploadError(saved, cause)
       }
-      return { ...saved, documentEvidencePresent: true }
+      // The upload advances the form version too, but its response does not
+      // say to what. Read the form again so the next save sends that version.
+      const latest = await getApplicationForm(applicationId).catch(
+        () => undefined,
+      )
+      return afterUpload(saved, latest)
     },
     onSuccess: (saved, { intent, file, answers }) => {
       keepSaved(saved)
@@ -177,6 +187,7 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
       setValues(latestValues)
       setSavedAnswers(answersForStep(step, latestValues))
       setVersion(latest.version)
+      setDocumentPresent(latest.documentEvidencePresent)
       save.reset()
       clearFieldErrors()
       setNotice({
@@ -206,8 +217,16 @@ export function StepForm({ applicationId, step, form }: StepFormProps) {
       return
     }
     clearFieldErrors()
-    if (intent === 'save' && !hasUnsavedChanges) {
-      setNotice({ message: 'There are no changes to save.', severity: 'info' })
+    if (!hasUnsavedChanges) {
+      // The API already has these answers, so there is nothing to send.
+      if (intent === 'save') {
+        setNotice({
+          message: 'There are no changes to save.',
+          severity: 'info',
+        })
+      } else {
+        void navigate(nextHref)
+      }
       return
     }
     setNotice(undefined)

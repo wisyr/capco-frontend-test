@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 
 import {
+  applicationFormQuery,
   currentApplicationQuery,
   startApplication,
   type CurrentApplication,
@@ -34,6 +35,12 @@ export default function CurrentApplicationJourneyPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const current = useQuery(currentApplicationQuery)
+  // The draft's own progress never marks the last step complete, so the
+  // form's step states, judged by the saved answers, are shown instead.
+  const form = useQuery({
+    ...applicationFormQuery(current.data?.id ?? ''),
+    enabled: Boolean(current.data),
+  })
   const start = useMutation({
     mutationFn: async () => assertSafeJourney(await startApplication()),
     onSuccess: (application) => {
@@ -73,19 +80,10 @@ export default function CurrentApplicationJourneyPage() {
       />
     )
   }
-  return (
-    <>
-      <title>{`${pageTitle} | KYC`}</title>
-      {application ? (
-        <ApplicantJourneyPresentation
-          entryState="resume"
-          progress={application.progress.map(({ step, state }) => ({
-            step,
-            state: state === 'not-started' ? 'remaining' : state,
-          }))}
-          onPrimaryAction={() => void navigate(application.href)}
-        />
-      ) : (
+  if (!application) {
+    return (
+      <>
+        <title>{`${pageTitle} | KYC`}</title>
         <ApplicantJourneyPresentation
           actionError={startErrorMessage(start.error)}
           entryState="start"
@@ -93,7 +91,43 @@ export default function CurrentApplicationJourneyPage() {
           progress={notStartedProgress}
           onPrimaryAction={() => start.mutate()}
         />
-      )}
+      </>
+    )
+  }
+
+  if (form.data === undefined) {
+    if (isSessionExpired(form.error)) {
+      return <SessionExpiredRedirect />
+    }
+    if (!form.isError) {
+      return (
+        <LoadingPage title={pageTitle} message="Loading your application…" />
+      )
+    }
+  }
+  // If the form cannot be loaded, the draft's own progress is still true,
+  // just less complete.
+  const progress =
+    form.data?.steps ??
+    application.progress.map(({ step, state }) => ({
+      step,
+      state: state === 'not-started' ? ('remaining' as const) : state,
+    }))
+  const readyForReview = progress.every(({ state }) => state === 'complete')
+  return (
+    <>
+      <title>{`${pageTitle} | KYC`}</title>
+      <ApplicantJourneyPresentation
+        entryState={readyForReview ? 'review' : 'resume'}
+        progress={progress}
+        onPrimaryAction={() =>
+          void navigate(
+            readyForReview
+              ? `/applications/${application.id}/review`
+              : application.href,
+          )
+        }
+      />
     </>
   )
 }

@@ -81,10 +81,17 @@ const formDocumentSchema = z.object({
   }),
 })
 
+/** How far each step is, judged by its saved answers. */
+export type FormStepProgress = z.infer<
+  typeof formDocumentSchema
+>['data']['attributes']['steps'][number]
+
 /** The persisted draft form, including its optimistic-concurrency version. */
 export interface ApplicationForm {
   applicationId: string
   answers: Answers
+  /** Unlike the current application's progress, can mark every step complete. */
+  steps: FormStepProgress[]
   documentEvidencePresent: boolean
   version: number | undefined
 }
@@ -234,6 +241,7 @@ function toApplicationForm({
   return {
     applicationId: data.id,
     answers: data.attributes.answers,
+    steps: data.attributes.steps,
     documentEvidencePresent: data.attributes.documentEvidence.present,
     version: data.attributes.version,
   }

@@ -21,6 +21,7 @@ Beyond the tickets:
   - Missing answers are listed under their step, with a link to that step.
   - Submit and the confirmation appear only once the API reports the draft as ready.
   - Every save drops the cached result, so the page never shows readiness from before the latest save.
+- **Progress on the journey page.** The current application's `progress` never marks the last step complete: it only reports which step is current. The page therefore shows the form's own step states (`GET …/form`), which the API judges from the saved answers. Once both steps are complete, the page says so and its button becomes **Review application**, leading to the review instead of back to step 2. If the form cannot be loaded, the page falls back to the application's progress.
 
 ## Architecture
 
@@ -51,10 +52,14 @@ The work follows the existing layout: route modules handle behaviour, presentati
 - **Sign-out clears cached data only after the journey unmounts.** Clearing it earlier made the open page refetch without a session.
 - **Credentials are not kept.** The password is cleared after a failed sign-in, and the mutation cache is cleared on success.
 - **Document upload runs after the answers are saved.** If the upload fails, the message says the answers were saved but the document was not, and saving again retries with the new version.
+  - A stored document also advances the form version, but the upload response does not include it. After uploading, the form is read again and its version kept, so the next save does not hit a false conflict.
+  - That version is kept only if the upload was the one change since the save. If another tab saved in between, or the read fails, the next save reports the conflict instead of overwriting anything.
+  - "Reload saved answers" after a conflict also refreshes whether a document is on file.
 - **Date fields stay text inputs.** `type="date"` would show an empty field for any saved value that isn't an ISO date, and the API accepts any string. A format hint meets WCAG 3.3.2 without that risk.
 - **Step validation (optional in TICKET-003, added).** Errors appear beside each field, focus moves to the first one, and nothing is sent to the API until the step is valid. An error clears as soon as its field is fixed.
   - **Continue / Save and review** needs a complete step: every answer, the consent and the document.
   - **Save** accepts a half-finished step, which is the point of save and resume. Anything filled in must still be valid, though, so an invalid email can't be saved. With no changes it says so instead of calling the API.
+  - **Continue / Save and review** with no changes goes straight to the next page without calling the API, after the usual check that the step is complete. The button stays enabled, because it is also the way forward.
   - **Formats:** email as `name@example.com`, and dates as real `YYYY-MM-DD` dates. Date of birth must be in the past and expiry today or later. Phone and the other text answers only need to be filled in.
   - The design-system `Form` uses React Aria's `validationBehavior="aria"`, which turns off the browser's own required-field check. Validation therefore runs in code, as it does on registration and sign-in.
 - **The unsaved-changes guard lives in the journey layout.** The step reports whether its answers differ from what the API last confirmed. The layout asks before in-app navigation (`useBlocker`) and before ending the session on Sign out. Closing the tab gets the browser's own prompt.
@@ -106,9 +111,11 @@ A newer push to the same branch cancels the older run, and the workflow only has
 ## Process
 
 - **Git.**
-  - Each ticket was built on its own `feature/TICKET-00X-…` branch from `develop` and merged with `--no-ff`, so each ticket stays visible in the history.
-  - Commits follow Conventional Commits and are small enough to review on their own.
-  - Fixes from reviews are separate commits, each with its own test.
+  - `main` holds the starter code. All work goes to `develop` first and reaches `main` in one release pull request.
+  - Each ticket was built on its own `feature/TICKET-00X-…` branch from `develop` and merged locally with `--no-ff`, so each ticket stays visible in the history. Follow-up fixes and notes were merged the same way.
+  - After the repository moved to GitHub, every change went through a pull request into `develop` (#1–#4): step validation, the CI pipeline, the folder restructure and review readiness. CI ran on each one, and each merge commit keeps its branch visible.
+  - Commits follow Conventional Commits. Fixes from reviews are separate commits, each with its own test.
+  - One exception: the commit in #4 (`feat(review): …`) also contains smaller fixes made just before it: root scripts that run the frontend checks, page titles on the error and receipt pages, and NOTES updates. It was left as it is rather than rewriting history that was already merged.
 - **AI-assisted development.**
   - The code was written with Claude Code.
   - Each ticket was planned before implementation. After each ticket the changes were reviewed for correctness, accessibility and fit with the existing architecture, and every finding was fixed in its own commit with a test.
