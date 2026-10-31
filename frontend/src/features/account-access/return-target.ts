@@ -1,3 +1,5 @@
+import { resolvePath } from 'react-router'
+
 export interface AccountAccessSearch {
   returnTo?: string
 }
@@ -13,7 +15,12 @@ export function parseAccountAccessSearch(
 }
 
 export function isSafeJourneyPath(path: string): boolean {
-  return path.startsWith('/applications/') && !path.startsWith('//')
+  if (!path.startsWith('/') || path.startsWith('//')) {
+    return false
+  }
+  // Check the path React Router will navigate to, so dot segments such as
+  // /applications/../reviewer cannot leave the journey.
+  return resolvePath(path).pathname.startsWith('/applications/')
 }
 
 export function accountAccessHref(

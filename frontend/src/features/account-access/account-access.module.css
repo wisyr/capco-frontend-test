@@ -1,4 +1,5 @@
 .page {
+  box-sizing: border-box;
   background: #f5f7fa;
   min-height: 100dvh;
   padding: 0;
@@ -35,4 +36,9 @@
   .cardContent {
     padding: 40px;
   }
+}
+
+/* Receives focus programmatically when the success message replaces the form. */
+.focusTarget:focus {
+  outline: none;
 }

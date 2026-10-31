@@ -8,6 +8,32 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
+const frontendRestrictedPaths = [
+  {
+    name: 'react',
+    importNames: ['FormEvent', 'SyntheticEvent'],
+    message:
+      'Use React 19 form actions or inferred DOM event types; do not introduce legacy synthetic event types.',
+  },
+]
+const frontendRestrictedPatterns = [
+  {
+    group: ['@mui/*', '@emotion/*'],
+    message:
+      'Application UI must use React Aria and public components from @kyc/ds.',
+  },
+  {
+    group: ['../src/*', '../../src/*', '../../../src/*'],
+    message:
+      'Application UI must import the public @kyc/ds API, not library internals.',
+  },
+]
+const noRouteImports = {
+  group: ['**/routes/**'],
+  message:
+    'Only routes may import routes; move what both need into features/ or shared/.',
+}
+
 export default defineConfig([
   globalIgnores([
     '.next/**',
@@ -99,7 +125,6 @@ export default defineConfig([
       parserOptions: {
         projectService: {
           allowDefaultProject: [
-            'frontend/e2e/*.ts',
             'frontend/playwright.config.ts',
             'frontend/vitest.config.ts',
           ],
@@ -132,24 +157,40 @@ export default defineConfig([
       'no-restricted-imports': [
         'error',
         {
-          paths: [
-            {
-              name: 'react',
-              importNames: ['FormEvent', 'SyntheticEvent'],
-              message:
-                'Use React 19 form actions or inferred DOM event types; do not introduce legacy synthetic event types.',
-            },
-          ],
+          paths: frontendRestrictedPaths,
+          patterns: frontendRestrictedPatterns,
+        },
+      ],
+    },
+  },
+  {
+    // Routes depend on features, never the other way round.
+    files: ['frontend/src/features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: frontendRestrictedPaths,
+          patterns: [...frontendRestrictedPatterns, noRouteImports],
+        },
+      ],
+    },
+  },
+  {
+    // Shared code sits below features as well as routes.
+    files: ['frontend/src/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: frontendRestrictedPaths,
           patterns: [
+            ...frontendRestrictedPatterns,
+            noRouteImports,
             {
-              group: ['@mui/*', '@emotion/*'],
+              group: ['**/features/**'],
               message:
-                'Application UI must use React Aria and public components from @kyc/ds.',
-            },
-            {
-              group: ['../src/*', '../../src/*', '../../../src/*'],
-              message:
-                'Application UI must import the public @kyc/ds API, not library internals.',
+                'Shared code must not import features; move what both need into shared/.',
             },
           ],
         },

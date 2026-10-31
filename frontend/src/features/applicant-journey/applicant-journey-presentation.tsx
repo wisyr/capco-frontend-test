@@ -1,10 +1,18 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from '@kyc/ui'
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Stack,
+  Typography,
+} from '@kyc/ui'
 
-import styles from '../applicant-journey.module.css'
+import styles from './applicant-journey.module.css'
 
 export type ApplicantJourneyStep = 'personal-details' | 'identity-and-address'
 export type ApplicantJourneyStepState = 'complete' | 'current' | 'remaining'
-export type ApplicantJourneyEntryState = 'start' | 'resume'
+export type ApplicantJourneyEntryState = 'start' | 'resume' | 'review'
 
 export interface ApplicantJourneyProgressItem {
   step: ApplicantJourneyStep
@@ -21,6 +29,10 @@ export interface ApplicantJourneyPresentationFixture {
 
 export interface ApplicantJourneyPresentationProps extends ApplicantJourneyPresentationFixture {
   onPrimaryAction: () => void
+  /** True while the primary action is waiting for the API. */
+  isActionPending?: boolean
+  /** Explains why the primary action failed, so the applicant can retry. */
+  actionError?: string
 }
 
 export const applicantJourneyFixtures = {
@@ -36,6 +48,13 @@ export const applicantJourneyFixtures = {
     progress: [
       { step: 'personal-details', state: 'current' },
       { step: 'identity-and-address', state: 'remaining' },
+    ],
+  },
+  review: {
+    entryState: 'review',
+    progress: [
+      { step: 'personal-details', state: 'complete' },
+      { step: 'identity-and-address', state: 'complete' },
     ],
   },
 } as const satisfies Record<
@@ -56,6 +75,12 @@ const copy = {
       'Your application is still a draft. Complete the remaining steps before review and submission.',
     action: 'Resume application',
   },
+  review: {
+    heading: 'Review your KYC application',
+    description:
+      'Both steps are complete. Check your answers, then submit your application for review.',
+    action: 'Review application',
+  },
 } as const
 
 const stepNames: Record<ApplicantJourneyStep, string> = {
@@ -73,6 +98,8 @@ export function ApplicantJourneyPresentation({
   entryState,
   progress,
   onPrimaryAction,
+  isActionPending = false,
+  actionError,
 }: ApplicantJourneyPresentationProps) {
   const stateCopy = copy[entryState]
 
@@ -132,9 +159,11 @@ export function ApplicantJourneyPresentation({
               </Stack>
             </Box>
 
+            {actionError ? <Alert severity="error">{actionError}</Alert> : null}
             <Button
               aria-describedby="journey-description journey-progress"
               fullWidth
+              isPending={isActionPending}
               onClick={onPrimaryAction}
               size="large"
               className={styles.action}

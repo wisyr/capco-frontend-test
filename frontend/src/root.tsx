@@ -1,5 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
+import { RouterProvider } from 'react-aria-components'
 import {
   isRouteErrorResponse,
   Links,
@@ -7,8 +8,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useHref,
+  useNavigate,
   useRouteError,
 } from 'react-router'
+
+import { createQueryClient } from './api/query-client'
 import './styles.css'
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -30,12 +35,19 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { mutations: { retry: false } } }),
-  )
+  const [queryClient] = useState(createQueryClient)
+  const navigate = useNavigate()
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      {/* Lets React Aria components with an href, such as Link, use client-side routing. */}
+      <RouterProvider
+        navigate={(href) => {
+          void navigate(href)
+        }}
+        useHref={useHref}
+      >
+        <Outlet />
+      </RouterProvider>
     </QueryClientProvider>
   )
 }
@@ -43,13 +55,19 @@ export default function App() {
 export function ErrorBoundary() {
   const error = useRouteError()
   const notFound = isRouteErrorResponse(error) && error.status === 404
+  const heading = notFound ? 'Page not found' : 'Something went wrong'
   return (
     <main>
-      <h1>{notFound ? 'Page not found' : 'Something went wrong'}</h1>
+      <title>{`${heading} | KYC`}</title>
+      <h1>{heading}</h1>
       <p>
         {notFound
           ? 'The page you requested does not exist.'
           : 'Please try again.'}
+      </p>
+      {/* A full page load, which also starts the app afresh after an error. */}
+      <p>
+        <a href="/applications/current">Go to your application</a>
       </p>
     </main>
   )

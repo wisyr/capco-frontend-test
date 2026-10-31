@@ -1,0 +1,119 @@
+import { useQuery } from '@tanstack/react-query'
+import { data } from 'react-router'
+
+import {
+  applicationFormQuery,
+  applicationReviewQuery,
+  applicationSteps,
+  type ApplicationStep,
+} from '../../api/applicant-applications'
+import { ApiError } from '../../api/json-api-client'
+import { requestFailureMessage } from '../../api/request-failure-message'
+import {
+  ApplicationNotFoundPage,
+  LoadFailedPage,
+  LoadingPage,
+} from '../../features/applicant-journey/page-status'
+import {
+  isSessionExpired,
+  SessionExpiredRedirect,
+} from '../../features/applicant-journey/session'
+import { stepTitles } from '../../features/application-form/application-steps'
+import { ReviewPage } from '../../features/application-form/review-page'
+import { StepForm } from '../../features/application-form/step-form'
+
+import type { Route } from './+types/step'
+
+function isApplicationStep(step: string): step is ApplicationStep {
+  return (applicationSteps as readonly string[]).includes(step)
+}
+
+/** The step named in the URL; any other value is a missing page. */
+export function parseStepParam(step: string): ApplicationStep | 'review' {
+  if (step === 'review' || isApplicationStep(step)) {
+    return step
+  }
+  throw data(null, { status: 404 })
+}
+
+export function clientLoader({ params }: Route.ClientLoaderArgs) {
+  return { step: parseStepParam(params.step) }
+}
+
+export default function ApplicationStepPage({
+  params,
+  loaderData,
+}: Route.ComponentProps) {
+  const { step } = loaderData
+  if (step === 'review') {
+    return <ReviewStep applicationId={params.applicationId} />
+  }
+  return <StepPage applicationId={params.applicationId} step={step} />
+}
+
+function ReviewStep({ applicationId }: { applicationId: string }) {
+  const review = useQuery(applicationReviewQuery(applicationId))
+  const title = 'Review application'
+
+  if (review.data) {
+    return <ReviewPage applicationId={applicationId} review={review.data} />
+  }
+  if (review.isError) {
+    if (isSessionExpired(review.error)) {
+      return <SessionExpiredRedirect />
+    }
+    if (review.error instanceof ApiError && review.error.status === 404) {
+      return <ApplicationNotFoundPage />
+    }
+    return (
+      <LoadFailedPage
+        title={title}
+        message={`We could not check your application. ${requestFailureMessage(review.error)}`}
+        onRetry={() => void review.refetch()}
+      />
+    )
+  }
+  return <LoadingPage title={title} message="Checking your application…" />
+}
+
+function StepPage({
+  applicationId,
+  step,
+}: {
+  applicationId: string
+  step: ApplicationStep
+}) {
+  const form = useQuery(applicationFormQuery(applicationId))
+  const title = stepTitles[step]
+
+  // Once answers have loaded, keep showing the form. A failed background
+  // refetch (for example on window focus) must not discard what the
+  // applicant is typing; saving reports an ended session instead.
+  if (form.data) {
+    return (
+      <StepForm
+        // A new step or application starts from its own saved answers.
+        key={`${applicationId}/${step}`}
+        applicationId={applicationId}
+        form={form.data}
+        step={step}
+      />
+    )
+  }
+  if (form.isError) {
+    if (isSessionExpired(form.error)) {
+      return <SessionExpiredRedirect />
+    }
+    if (form.error instanceof ApiError && form.error.status === 404) {
+      return <ApplicationNotFoundPage />
+    }
+    return (
+      <LoadFailedPage
+        title={title}
+        message={`We could not load your saved answers. ${requestFailureMessage(form.error)}`}
+        onRetry={() => void form.refetch()}
+      />
+    )
+  }
+  return <LoadingPage title={title} message="Loading your saved answers…" />
+}

@@ -13,15 +13,16 @@
   },
   "scripts": {
     "dev:app": "node scripts/run-application.mjs",
-    "build": "npm run build --workspace @kyc/ui",
+    "build": "npm run build --workspaces",
     "build-storybook": "npm run build-storybook --workspace @kyc/ui",
     "storybook": "npm run storybook --workspace @kyc/ui",
-    "test": "npm run test --workspace @kyc/ui",
-    "typecheck": "npm run typecheck --workspace @kyc/ui",
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
     "lint": "eslint DS frontend",
     "lint:fix": "eslint DS frontend --fix",
     "quality": "npm run lint && npm run typecheck && npm run check:dependencies && npm test && npm run build",
     "format": "prettier --write DS frontend package.json eslint.config.mjs prettier.config.js",
+    "format:check": "prettier --check DS frontend package.json eslint.config.mjs prettier.config.js",
     "check:dependencies": "dependency-cruiser --config .dependency-cruiser.cjs DS"
   },
   "devDependencies": {

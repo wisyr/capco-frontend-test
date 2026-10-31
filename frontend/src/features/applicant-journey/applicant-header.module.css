@@ -1,0 +1,47 @@
+.header {
+  align-items: center;
+  background: #1976d2;
+  box-sizing: border-box;
+  color: #fff;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 8px 16px;
+}
+/* DS text is dark navy (3.1:1 on this blue); white reaches 4.6:1. */
+.title.title {
+  color: #fff;
+}
+.homeLink {
+  border-radius: 4px;
+  color: #fff;
+  text-decoration: none;
+}
+.homeLink[data-hovered] {
+  text-decoration: underline;
+}
+.homeLink[data-focus-visible] {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+/* The DS secondary button is blue on transparent, unreadable on this header. */
+.signOut.signOut {
+  background: #fff;
+  border-color: #fff;
+  color: #0d47a1;
+  flex-shrink: 0;
+}
+.signOut.signOut[data-focus-visible] {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.alert.alert {
+  margin: 16px;
+}
+
+@media (min-width: 600px) {
+  .header {
+    padding: 8px 32px;
+  }
+}
