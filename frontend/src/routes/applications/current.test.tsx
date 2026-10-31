@@ -1,12 +1,13 @@
 import { act, screen } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { delay, http, HttpResponse } from 'msw'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LocationProbe, renderRoutes } from '../../test/render-routes'
 import { server } from '../../test/server'
 
 import CurrentApplicationJourneyPage from './current'
+import { FORM_URL, formDocument } from './step-test-utils'
 
 expect.extend(toHaveNoViolations)
 
@@ -47,6 +48,23 @@ function renderJourney() {
 }
 
 const location = () => screen.findByRole('status', { name: 'Current location' })
+
+type StepState = 'complete' | 'current' | 'remaining'
+
+/** Serves the draft's form with these step states. */
+function serveFormSteps(personal: StepState, identity: StepState) {
+  const document = formDocument()
+  document.data.attributes.steps = [
+    { step: 'personal-details', state: personal },
+    { step: 'identity-and-address', state: identity },
+  ]
+  server.use(http.get(FORM_URL, () => HttpResponse.json(document)))
+}
+
+const progressList = () =>
+  screen.getByRole('list', { name: 'Application progress' })
+
+beforeEach(() => serveFormSteps('complete', 'current'))
 
 describe('CurrentApplicationJourneyPage', () => {
   it('starts a draft when the applicant has none and opens its first step', async () => {
@@ -208,5 +226,93 @@ describe('CurrentApplicationJourneyPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Resume application' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('marks both steps complete and offers the review once the answers are complete', async () => {
+    serveFormSteps('complete', 'complete')
+    server.use(
+      http.get(CURRENT_URL, () =>
+        HttpResponse.json(
+          applicationDocument(
+            `/applications/${APPLICATION_ID}/identity-and-address`,
+          ),
+        ),
+      ),
+    )
+    const { user, container } = renderJourney()
+
+    const review = await screen.findByRole('button', {
+      name: 'Review application',
+    })
+    expect(
+      screen.getByRole('heading', { name: 'Review your KYC application' }),
+    ).toBeInTheDocument()
+    expect(progressList()).toHaveTextContent(
+      '1Personal detailsComplete2Identity and addressComplete',
+    )
+    expect(await axe(container)).toHaveNoViolations()
+    await user.click(review)
+
+    expect(await location()).toHaveTextContent(
+      `/applications/${APPLICATION_ID}/review`,
+    )
+  })
+
+  it('shows the progress from the saved answers, not the draft', async () => {
+    serveFormSteps('current', 'remaining')
+    server.use(
+      http.get(CURRENT_URL, () =>
+        HttpResponse.json(
+          applicationDocument(
+            `/applications/${APPLICATION_ID}/personal-details`,
+          ),
+        ),
+      ),
+    )
+    renderJourney()
+
+    await screen.findByRole('button', { name: 'Resume application' })
+    expect(progressList()).toHaveTextContent(
+      '1Personal detailsCurrent step2Identity and addressRemaining',
+    )
+  })
+
+  it("falls back to the draft's progress when the form cannot be loaded", async () => {
+    server.use(
+      http.get(CURRENT_URL, () =>
+        HttpResponse.json(
+          applicationDocument(
+            `/applications/${APPLICATION_ID}/identity-and-address`,
+          ),
+        ),
+      ),
+      http.get(FORM_URL, () => new HttpResponse(null, { status: 503 })),
+    )
+    renderJourney()
+
+    expect(
+      await screen.findByRole('button', { name: 'Resume application' }),
+    ).toBeInTheDocument()
+    expect(progressList()).toHaveTextContent(
+      '1Personal detailsComplete2Identity and addressCurrent step',
+    )
+  })
+
+  it('sends the applicant to sign in when the form reports an ended session', async () => {
+    server.use(
+      http.get(CURRENT_URL, () =>
+        HttpResponse.json(
+          applicationDocument(
+            `/applications/${APPLICATION_ID}/identity-and-address`,
+          ),
+        ),
+      ),
+      http.get(FORM_URL, () => new HttpResponse(null, { status: 401 })),
+    )
+    renderJourney()
+
+    expect(await location()).toHaveTextContent(
+      '/sign-in?returnTo=%2Fapplications%2Fcurrent',
+    )
   })
 })

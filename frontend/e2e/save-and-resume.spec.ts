@@ -47,6 +47,12 @@ test('saved answers survive signing out and back in', async ({ page }) => {
     page.getByText('Your answers and document have been saved.'),
   ).toBeVisible()
 
+  // The upload advances the form version, so saving again must use it.
+  await field(page, 'Street').fill('12 St James Square')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Your answers have been saved.')).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/sign-in$/)
 
@@ -57,7 +63,7 @@ test('saved answers survive signing out and back in', async ({ page }) => {
 
   await expect(field(page, 'City')).toHaveValue('London')
   await expect(field(page, 'Postal code')).toHaveValue('SW1Y 4JH')
-  await expect(field(page, 'Street')).toHaveValue('')
+  await expect(field(page, 'Street')).toHaveValue('12 St James Square')
   await expect(page.getByText(/A document is already on file/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Back' }).click()
@@ -127,6 +133,25 @@ test('the review lists missing answers and offers Submit only when complete', as
     .setInputFiles(passportImage)
   await page.getByRole('button', { name: 'Save and review' }).click()
 
+  await expect(page.getByText(/All required answers are saved/)).toBeVisible()
+
+  // Back on the step after the upload, a save must not report a conflict.
+  await page.getByRole('button', { name: 'Return to form' }).click()
+  await field(page, 'City').fill('Westminster')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Your answers have been saved.')).toBeVisible()
+  // Already saved, so this opens the review without saving again.
+  await page.getByRole('button', { name: 'Save and review' }).click()
+  await expect(page.getByText(/All required answers are saved/)).toBeVisible()
+
+  // The journey page shows both steps as complete and leads to the review.
+  await page.getByRole('link', { name: 'KYC Application' }).click()
+  const progress = page.getByRole('list', { name: 'Application progress' })
+  await expect(progress.getByRole('listitem')).toHaveText([
+    /Personal details\s*Complete/,
+    /Identity and address\s*Complete/,
+  ])
+  await page.getByRole('button', { name: 'Review application' }).click()
   await expect(page.getByText(/All required answers are saved/)).toBeVisible()
   await page
     .getByRole('checkbox', { name: /I confirm the information/ })

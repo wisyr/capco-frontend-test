@@ -180,11 +180,40 @@ describe('ApplicationStepPage saving', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('continues without saving when nothing changed', async () => {
+    const patches = serveForm()
+    const { user } = renderStep('personal-details')
+
+    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Identity and address' }),
+    ).toBeInTheDocument()
+    expect(patches).toEqual([])
+  })
+
+  it('still checks an unchanged step before continuing', async () => {
+    server.use(
+      http.get(FORM_URL, () =>
+        HttpResponse.json(formDocument({ ...savedAnswers, phone: '' })),
+      ),
+    )
+    const { user } = renderStep('personal-details')
+
+    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByLabelText('Phone (required)')).toHaveFocus()
+    expect(
+      screen.getByRole('heading', { name: 'Personal details' }),
+    ).toBeInTheDocument()
+  })
+
   it('does not continue when saving fails', async () => {
     serveForm({ patch: () => new HttpResponse(null, { status: 500 }) })
     const { user } = renderStep('personal-details')
 
-    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+    await user.type(await nameField(), ' King')
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'We could not save your answers.',

@@ -12,7 +12,7 @@ import styles from './applicant-journey.module.css'
 
 export type ApplicantJourneyStep = 'personal-details' | 'identity-and-address'
 export type ApplicantJourneyStepState = 'complete' | 'current' | 'remaining'
-export type ApplicantJourneyEntryState = 'start' | 'resume'
+export type ApplicantJourneyEntryState = 'start' | 'resume' | 'review'
 
 export interface ApplicantJourneyProgressItem {
   step: ApplicantJourneyStep
@@ -50,6 +50,13 @@ export const applicantJourneyFixtures = {
       { step: 'identity-and-address', state: 'remaining' },
     ],
   },
+  review: {
+    entryState: 'review',
+    progress: [
+      { step: 'personal-details', state: 'complete' },
+      { step: 'identity-and-address', state: 'complete' },
+    ],
+  },
 } as const satisfies Record<
   ApplicantJourneyEntryState,
   ApplicantJourneyPresentationFixture
@@ -67,6 +74,12 @@ const copy = {
     description:
       'Your application is still a draft. Complete the remaining steps before review and submission.',
     action: 'Resume application',
+  },
+  review: {
+    heading: 'Review your KYC application',
+    description:
+      'Both steps are complete. Check your answers, then submit your application for review.',
+    action: 'Review application',
   },
 } as const
 

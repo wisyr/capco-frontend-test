@@ -28,3 +28,22 @@ export class DocumentUploadError extends Error {
     this.savedForm = savedForm
   }
 }
+
+/**
+ * The form to keep after a save and an upload. The form read after the upload
+ * is used only if the upload was the one change since the save. Otherwise
+ * (another tab saved meanwhile, or the read failed) the save's version stays,
+ * so the next save reports a conflict instead of overwriting anything.
+ */
+export function afterUpload(
+  saved: ApplicationForm,
+  latest: ApplicationForm | undefined,
+): ApplicationForm {
+  const onlyThisUpload =
+    latest?.version !== undefined &&
+    saved.version !== undefined &&
+    latest.version === saved.version + 1
+  return onlyThisUpload && latest
+    ? latest
+    : { ...saved, documentEvidencePresent: true }
+}

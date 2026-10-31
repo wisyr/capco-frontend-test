@@ -130,6 +130,10 @@ describe('getApplicationForm', () => {
     await expect(getApplicationForm(APPLICATION_ID)).resolves.toEqual({
       applicationId: APPLICATION_ID,
       answers: { name: 'Ada', phone: null, consentConfirmed: true },
+      steps: [
+        { step: 'personal-details', state: 'current' },
+        { step: 'identity-and-address', state: 'remaining' },
+      ],
       documentEvidencePresent: true,
       version: 3,
     })
